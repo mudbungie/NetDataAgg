@@ -1,0 +1,4 @@
+dnslogging.conf
+.**.swp
+**.pyc
+__pycache__/**
