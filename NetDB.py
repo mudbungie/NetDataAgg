@@ -1,6 +1,7 @@
+# Not mine
 import sqlalchemy as sqla
 from datetime import datetime
-
+# Mine
 import Router
 from Mac import Mac
 
@@ -50,10 +51,10 @@ class NetDB(Database):
                 self.updateLiveAndHist()
         return True
 
-        
     def updateRadius(raddb):
+        pass
     def updateCustomers(zabdb):
-    
+        pass
     def arpLookup(ip=None, mac=None):
         table = self.initTable('arp')
 
