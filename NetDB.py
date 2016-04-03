@@ -43,16 +43,20 @@ class NetDB(Database):
         for host in network.hosts():
             # Make a list of Router objects from the addresses.
             hosts.append(Router(network.network_address))
+        arpTable = []
         for router in hosts:
             # Pull the router's ARP table via SNMP
             # Returns a list of two-item dictionaries
-            arpTable = router.scanArp()
-            for ipaddr, macaddr in arpTable:
-                self.updateLiveAndHist()
+            arpTable += router.scanArp()
+        self.updateLiveAndHist(table, histTable, arpTable)
         return True
 
     def updateRadius(raddb):
-        pass
+        radData = raddb.fetchRadData()
+        table = self.tables['radius']
+        histTable = self.tables['historicradius']
+        self.updateLiveAndHist(table, histTable, radData)
+
     def updateCustomers(zabdb):
         pass
     def arpLookup(ip=None, mac=None):

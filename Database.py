@@ -7,9 +7,8 @@ import datetime
 class Database:
     # Base class, don't use directly, build subclasses.
     def __init__(self, databaseConfig):
+        # The reason for the microfunction is just mobility for child classes.
         self.initDB(databaseConfig)
-        # Defined in child classes, because connection strings depend on the 
-        # database engine.
 
     def initDB(self, config):
         # Read the config into attributes
