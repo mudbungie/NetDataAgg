@@ -3,7 +3,7 @@ import sqlalchemy as sqla
 from datetime import datetime
 # Mine
 from Database import Database
-import Router
+from Router import Router
 from Mac import Mac
 
 class NetDB(Database):
@@ -14,12 +14,12 @@ class NetDB(Database):
     # It's postgres.
     connectionProtocol = 'postgresql+psycopg2://'
     tableNames = [ 'arp',
-                        'historicarp',
-                        'dnslog',
-                        'radius',
-                        'historicradius',
-                        'customers',
-                        ]
+                    'historicarp',
+                    'dnslog',
+                    'radius',
+                    'historicradius',
+                    'customers',
+                    ]
     '''
     def connect(self):
         # Construct a connection string out of the config dictionary passed
@@ -38,17 +38,19 @@ class NetDB(Database):
         self.initTables(tableNames)
         return True
     '''
-    def updateArp(network):
+    def updateArp(self, network, community):
         # Scan all the routers in the network, update arp data.
         table = self.tables['arp']
-        histTable = self.tables['historicArp']
+        histTable = self.tables['historicarp']
 
         # Also scan the network address, because it's not a real network, but 
         # an IP range.
-        hosts = [Router(network.network_address)]
+        hosts = []
+        hosts.append(Router(network.network_address, community))
+
         for host in network.hosts():
             # Make a list of Router objects from the addresses.
-            hosts.append(Router(network.network_address))
+            hosts.append(Router(network.network_address, community))
         arpTable = []
         for router in hosts:
             # Pull the router's ARP table via SNMP

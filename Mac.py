@@ -13,7 +13,8 @@ class Mac:
             macstr = ':'.join([s[6:8], s[10:12], s[14:16], s[18:20], s[22:24],
                 s[26:28]]).lower()
         macre = re.compile(r'([a-f0-9]{2}[:]?){6}')
-        assert re.match(macre, mac)
+        if not macre.match(mac):
+            raise Exception('Not a MAC address!')
         self.mac = macstr
     def __str__(self):
-        return self.mac
+        return self.mac.__str__()

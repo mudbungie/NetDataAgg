@@ -12,9 +12,13 @@ from Ip import Ip
 from Mac import Mac
 
 class Router:
-    def __init__(self, ip):
+    def __init__(self, ip, community):
         # First, double check that IP is actually an IP
         self.ip = Ip(ip)
+
+        # Initiate SNMP
+        self.session = Session(hostname=str(self.ip), community=community,
+            version=1)
 
     def walk(self, mib):
         # Walks the specified mib
