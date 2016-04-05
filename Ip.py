@@ -18,5 +18,5 @@ class Ip:
         assert re.match(ipre, ipstr)
         self.ip = ipstr
    
-   def __str__(self):
+    def __str__(self):
         return self.ip

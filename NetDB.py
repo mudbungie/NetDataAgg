@@ -2,6 +2,7 @@
 import sqlalchemy as sqla
 from datetime import datetime
 # Mine
+from Database import Database
 import Router
 from Mac import Mac
 
@@ -9,7 +10,18 @@ class NetDB(Database):
     # This is for the database of network data aggregation.
     # It's a postgresql DB, and the main ingestion point for all of the
     # various services on our network.
-    def connection(self):
+
+    # It's postgres.
+    connectionProtocol = 'postgresql+psycopg2://'
+    tableNames = [ 'arp',
+                        'historicarp',
+                        'dnslog',
+                        'radius',
+                        'historicradius',
+                        'customers',
+                        ]
+    '''
+    def connect(self):
         # Construct a connection string out of the config dictionary passed
         # during init.
         connectionString = ''.join([    'postgresql+psycopg2://',
@@ -18,20 +30,14 @@ class NetDB(Database):
                                         self.config['host'], '/',
                                         self.config['dbname']
                                         ])
-        engine = sqla.create_engine(connectionString)
-        self.metadata.create_all(engine)
-   
+        self.connection = sqla.create_engine(connectionString)
+        self.metadata = sqla.MetaData(self.connection)
+
         # Define all the tables of the DB, An attribute, self.tables{} is 
         # created.
-        tableNames = [  'arp',
-                        'historicarp'
-                        'dnslog',
-                        'radius',
-                        'historicradius',
-                        'customers',
-                        ]
-        self.inittables[tableNames]
-
+        self.initTables(tableNames)
+        return True
+    '''
     def updateArp(network):
         # Scan all the routers in the network, update arp data.
         table = self.tables['arp']

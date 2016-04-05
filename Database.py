@@ -10,6 +10,24 @@ class Database:
         # The reason for the microfunction is just mobility for child classes.
         self.initDB(databaseConfig)
 
+    def connect(self):
+        # Construct a connection string out of the config dictionary passed
+        # during init.
+
+        # Define connectionProtocol and tableNames in child classes.
+        connectionString = ''.join([    self.connectionProtocol,
+                                        self.config['user'], ':',
+                                        self.config['password'], '@',
+                                        self.config['host'], '/',
+                                        self.config['dbname']
+                                        ])
+        self.connection = sqla.create_engine(connectionString)
+        self.metadata = sqla.MetaData(self.connection)
+
+        # Initialize whatever tables this database uses
+        self.initTables(self.tableNames)
+        return True
+
     def initDB(self, config):
         # Read the config into attributes
         self.config = config
@@ -20,10 +38,10 @@ class Database:
             autoload_with=self.connection)
         return table
 
-    def initTables(self, tablesNames):
+    def initTables(self, tableNames):
         self.tables = {}
         for tableName in tableNames:
-            self.tables[tableName] = self.initTable[tableName]
+            self.tables[tableName] = self.initTable(tableName)
 
     def execute(self, query):
         # Just shorthand
@@ -40,7 +58,7 @@ class Database:
             column = str(column).split('.')[1]
             # See what fits:
             try:
-                values[column.lower[()] = data[column]
+                values[column.lower()] = data[column]
             except KeyError:
                 # Non-matching data is discarded
                 pass
@@ -96,8 +114,7 @@ class Database:
                     # First, expire the current historical item.
                     histFilter = sqla.and_(histTable.c.expired != None,
                         histTable.primary_key == data[pkey])
-                    histExpire = histTable.update().where(histFilter).\
-                        values('expired'=now)
+                    histExpire = histTable.update().where(histFilter).values({'expired':now})
                     self.execute(histExpire)
                     # Now, make a new historic record
                     data['observed'] = now

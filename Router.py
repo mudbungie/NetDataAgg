@@ -11,7 +11,7 @@ import re
 from Ip import Ip
 from Mac import Mac
 
-class Router
+class Router:
     def __init__(self, ip):
         # First, double check that IP is actually an IP
         self.ip = Ip(ip)
