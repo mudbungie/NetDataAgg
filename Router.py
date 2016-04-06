@@ -45,11 +45,12 @@ class Router:
                 try:
                     # Validation occurs in the decoding, just move on if they
                     # throw assertion errors.
-                    mac = Mac(response.value, encoding='utf=16')
-                    ip = Mac(response.oid_index, encoding='snmp')
+                    mac = Mac(response.value, encoding='utf-16')
+                    ip = Ip(response.oid_index, encoding='snmp')
+                    #print('MAC: ' + str(mac) + ' IP: ' + str(ip))
                     values = {}
-                    values['mac'] = mac
-                    values['ip'] = ip
+                    values['mac'] = str(mac)
+                    values['ip'] = str(ip)
                     arpTable.append(values)
                 except AssertionError:
                     pass

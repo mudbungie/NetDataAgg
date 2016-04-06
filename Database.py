@@ -73,7 +73,7 @@ class Database:
         pkey = self.connection.execute(insert).inserted_primary_key
         return pkey
 
-    def updateLiveAndHist(liveTable, histTable, data):
+    def updateLiveAndHist(self, liveTable, histTable, data):
         # liveTable and histTable == sqla.Table
         # data == list of dicts. Dicts should be column, value.
 
@@ -104,25 +104,25 @@ class Database:
                 # If the data matches, nothing to be done. Otherwise...
                 if not datum == relevantLiveData:
                     # When data updates, so do we!
-                    # First, update the live data.
-                    liveUpdate = liveTable.update().\
-                        where(liveTable.primary_key == data).\
-                        values(data)
-                    self.execute(liveUpdate)
-                    # Then, update the history.
+                    # First, update the history.
                     now = datetime.now()
                     # First, expire the current historical item.
                     histFilter = sqla.and_(histTable.c.expired != None,
-                        histTable.primary_key == data[pkey])
+                        histTable.primary_key == datum[pkey])
                     histExpire = histTable.update().where(histFilter).values({'expired':now})
                     self.execute(histExpire)
                     # Now, make a new historic record
-                    data['observed'] = now
-                    histInsert = histTable.insert().values(data)
+                    histDatum['observed'] = now
+                    histInsert = histTable.insert().values(histDatum)
                     self.execute(histInsert)
+                    # The, update the live data.
+                    liveUpdate = liveTable.update().\
+                        where(liveTable.primary_key == datum[pkey]).\
+                        values(datum)
+                    self.execute(liveUpdate)
                     
             except KeyError:
                 # There's no matching record. This is new data, so insert it.
-                insert = liveTable.insert(data)
+                insert = liveTable.insert(datum)
                 self.execute(insert)
 

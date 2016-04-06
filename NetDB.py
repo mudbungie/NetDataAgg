@@ -46,16 +46,19 @@ class NetDB(Database):
         # Also scan the network address, because it's not a real network, but 
         # an IP range.
         hosts = []
+        #print('network address')
+        #print(network.network_address)
         hosts.append(Router(network.network_address, community))
 
         for host in network.hosts():
+            #print(host)
             # Make a list of Router objects from the addresses.
             hosts.append(Router(network.network_address, community))
         arpTable = []
         for router in hosts:
             # Pull the router's ARP table via SNMP
             # Returns a list of two-item dictionaries
-            arpTable += router.scanArp()
+            arpTable += router.getArpTable()
         self.updateLiveAndHist(table, histTable, arpTable)
         return True
 
