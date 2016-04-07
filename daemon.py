@@ -16,6 +16,7 @@ if __name__ == '__main__':
     raddb = RadDB(config['databases']['radius'])
     zabdb = ZabDB(config['databases']['zabbix'])
 
+    
     routers = IPv4Network(config['targets']['routers'])
     community = config['community']
     netdb.updateArp(routers, community)

@@ -20,24 +20,39 @@ class NetDB(Database):
                     'historicradius',
                     'customers',
                     ]
-    '''
-    def connect(self):
-        # Construct a connection string out of the config dictionary passed
-        # during init.
-        connectionString = ''.join([    'postgresql+psycopg2://',
-                                        self.config['user'], ':',
-                                        self.config['password'], '@',
-                                        self.config['host'], '/',
-                                        self.config['dbname']
-                                        ])
-        self.connection = sqla.create_engine(connectionString)
-        self.metadata = sqla.MetaData(self.connection)
+    
+    def insert(self, table, values):
+        q = table.insert(values)
+        try:
+            return self.execute(q)
+        except sqla.exc.IntegrityError as IntegrityError:
+            # This shows up in the case of a redundant MAC address insert.
+            # Those errors occur because Juniper Routers have an actual IP
+            # stack implemented for internal routing, and the addresses used 
+            # are not unique. We discard such exceptions.
+            #print('##EXCEPTION MATCHED###')
+            # If this is the second hex of the first octet, it's reserved.
+            localMacs = ['2', '6', 'a', 'e']
+            try:
+                if values['mac'][1] in localMacs:
+                    pass
+                else:
+                    #print('1')
+                    #print(values['mac'])
+                    raise IntegrityError
+            except NameError:
+                # Inserting something other than a MAC
+                for key, value in values:
+                    print(key, value)
+                print('Primary key collision on something other than a MAC')
+                raise IntegrityError
+                
 
-        # Define all the tables of the DB, An attribute, self.tables{} is 
-        # created.
-        self.initTables(tableNames)
-        return True
-    '''
+    def execute(self, query):
+        # Shadowing the parent class' execute function is a great way to
+        # handle DB exceptions without having to reimplement general methods
+        return self.connection.execute(query)
+
     def updateArp(self, network, community):
         # Scan all the routers in the network, update arp data.
         table = self.tables['arp']
@@ -51,14 +66,16 @@ class NetDB(Database):
         hosts.append(Router(network.network_address, community))
 
         for host in network.hosts():
-            #print(host)
+            print(host)
             # Make a list of Router objects from the addresses.
-            hosts.append(Router(network.network_address, community))
+            hosts.append(Router(host, community))
         arpTable = []
         for router in hosts:
+            print(router.ip)
             # Pull the router's ARP table via SNMP
             # Returns a list of two-item dictionaries
             arpTable += router.getArpTable()
+            print(len(arpTable))
         self.updateLiveAndHist(table, histTable, arpTable)
         return True
 

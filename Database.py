@@ -2,7 +2,7 @@
 
 # db adapter
 import sqlalchemy as sqla
-import datetime
+from datetime import datetime
 
 class Database:
     # Base class, don't use directly, build subclasses.
@@ -26,6 +26,7 @@ class Database:
 
         # Initialize whatever tables this database uses
         self.initTables(self.tableNames)
+        self.inspector = sqla.engine.reflection.Inspector.from_engine(self.connection)
         return True
 
     def initDB(self, config):
@@ -73,9 +74,13 @@ class Database:
         pkey = self.connection.execute(insert).inserted_primary_key
         return pkey
 
+    def insert(self, table, values):
+        q = table.insert(values)
+        return self.execute()
+
     def updateLiveAndHist(self, liveTable, histTable, data):
         # liveTable and histTable == sqla.Table
-        # data == list of dicts. Dicts should be column, value.
+        # data == list of dicts. Dicts should be column: value.
 
         # This is a generalized method for updating two tables at once, one of
         # which is live, and the other of which is historic. It records the
@@ -89,15 +94,20 @@ class Database:
         # Read that data into a dictionary
         liveData = {}
         columns = liveTable.c.keys()
-        pkey = liveTable.primary_key
+        #pkey = liveTable.get_pk_constraint
+        pkey = sqla.engine.reflection.Inspector.from_engine(self.connection).get_primary_keys(liveTable)[0]
         for record in liveRecords:
             row = {}
             for column in columns:
                 row[column] = getattr(record, column)
-            liveData[pkey] = row
-
+                #print(column, row[column])
+            # We're going to address these by pkey later, so dicts
+            liveData[row[pkey]] = row
         # Now, see which records are entirely new, and which need updates.
+        print(len(data))
+        count = 0
         for datum in data:
+            count += 1
             try:
                 # Get the active record that has the same pkey.
                 relevantLiveData = liveData[datum[pkey]]
@@ -112,6 +122,10 @@ class Database:
                     histExpire = histTable.update().where(histFilter).values({'expired':now})
                     self.execute(histExpire)
                     # Now, make a new historic record
+                    # We do this in a memory inefficient manner, because in 
+                    # case of failure, action condition is still met, because
+                    # the live table hasn't been updated.
+                    histDatum = datum.copy()
                     histDatum['observed'] = now
                     histInsert = histTable.insert().values(histDatum)
                     self.execute(histInsert)
@@ -120,9 +134,15 @@ class Database:
                         where(liveTable.primary_key == datum[pkey]).\
                         values(datum)
                     self.execute(liveUpdate)
-                    
+                    # Finally, append the new record to the live records dict.
+                    liveData[datum[pkey]] = datum
+                else:
+                    #print('pkey ' + datum[pkey] + ' already seen')
+                    pass
+
             except KeyError:
                 # There's no matching record. This is new data, so insert it.
-                insert = liveTable.insert(datum)
-                self.execute(insert)
-
+                # Insert is often shadowed in child classes, because of error
+                # handling.
+                print('new: ' + str(count))
+                self.insert(liveTable, datum)

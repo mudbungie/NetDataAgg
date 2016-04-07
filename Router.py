@@ -2,7 +2,7 @@
 
 # Not mine
 from easysnmp import Session
-import easysnmp.exceptions
+import easysnmp
 from binascii import hexlify
 from datetime import datetime
 import re
@@ -25,7 +25,7 @@ class Router:
         try:
             responses = self.session.walk(mib)
             return responses
-        except easysnmp.exceptions.EASYSNMPNoSuchNameError:
+        except easysnmp.exceptions.EasySNMPNoSuchNameError:
             # Probably meanas that you're hitting the wrong kind of device
             return False
         except easysnmp.exceptions.EasySNMPTimeoutError:
@@ -51,6 +51,8 @@ class Router:
                     values = {}
                     values['mac'] = str(mac)
                     values['ip'] = str(ip)
+                    # We also want to know where the ARP record came from.
+                    values['source'] = str(self.ip)
                     arpTable.append(values)
                 except AssertionError:
                     pass
