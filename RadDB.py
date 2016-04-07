@@ -8,23 +8,7 @@ class RadDB(Database):
     # queries, so we just want to extricate that data.
     connectionProtocol = 'mysql+pymysql://'
     tableNames = ['username_mac']
-    '''
-    def connect(self):
-        # Construct a connection string out of the config dictionary passed
-        # during init.
-        connectionString = ''.join([    'mysql+pymysql://',
-                                        self.config['user'], ':',
-                                        self.config['password'], '@',
-                                        self.config['host'], '/',
-                                        self.config['dbname'],
-                                        ])
-        self.connection = sqla.create_engine(connectionString)
-        self.metadata = sqla.MetaData(self.connection)
 
-        # There's really just the one table that we access.
-        tableNames = ['username_mac']
-        self.initTables(tableNames)
-    '''
     def fetchRadData(self):
         # Pull the entire table. 
         table = self.tables['username_mac']

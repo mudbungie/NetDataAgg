@@ -13,41 +13,15 @@ class NetDB(Database):
 
     # It's postgres.
     connectionProtocol = 'postgresql+psycopg2://'
-    tableNames = [ 'arp',
+    tableNames = [  'arp',
                     'historicarp',
                     'dnslog',
                     'radius',
                     'historicradius',
                     'customers',
+                    'routers',
                     ]
     
-    def insert(self, table, values):
-        q = table.insert(values)
-        try:
-            return self.execute(q)
-        except sqla.exc.IntegrityError as IntegrityError:
-            # This shows up in the case of a redundant MAC address insert.
-            # Those errors occur because Juniper Routers have an actual IP
-            # stack implemented for internal routing, and the addresses used 
-            # are not unique. We discard such exceptions.
-            #print('##EXCEPTION MATCHED###')
-            # If this is the second hex of the first octet, it's reserved.
-            localMacs = ['2', '6', 'a', 'e']
-            try:
-                if values['mac'][1] in localMacs:
-                    pass
-                else:
-                    #print('1')
-                    #print(values['mac'])
-                    raise IntegrityError
-            except NameError:
-                # Inserting something other than a MAC
-                for key, value in values:
-                    print(key, value)
-                print('Primary key collision on something other than a MAC')
-                raise IntegrityError
-                
-
     def execute(self, query):
         # Shadowing the parent class' execute function is a great way to
         # handle DB exceptions without having to reimplement general methods
@@ -66,17 +40,13 @@ class NetDB(Database):
         hosts.append(Router(network.network_address, community))
 
         for host in network.hosts():
-            print(host)
             # Make a list of Router objects from the addresses.
-            hosts.append(Router(host, community))
-        arpTable = []
-        for router in hosts:
-            print(router.ip)
+            router = Router(host, community)
             # Pull the router's ARP table via SNMP
             # Returns a list of two-item dictionaries
-            arpTable += router.getArpTable()
-            print(len(arpTable))
-        self.updateLiveAndHist(table, histTable, arpTable)
+            arpTable = router.getArpTable()
+            print(router.ip, 'has', len(arpTable), 'arp entries.')
+            self.updateLiveAndHist(table, histTable, arpTable)
         return True
 
     def updateRadius(raddb):
@@ -84,6 +54,7 @@ class NetDB(Database):
         table = self.tables['radius']
         histTable = self.tables['historicradius']
         self.updateLiveAndHist(table, histTable, radData)
+        return True
 
     def updateCustomers(zabdb):
         pass
@@ -124,3 +95,8 @@ class NetDB(Database):
         username = record.username
         return username
 
+    def getRouters(self):
+        table = 'routers'
+        self.routers = []
+        q = table.select()
+        rows = table.NOTDONE

@@ -47,36 +47,11 @@ class Database:
     def execute(self, query):
         # Just shorthand
         return self.connection.execute(query)
-    
-    def insert(self, data, table):
-        # Take a dict of values and a table, find the keys that match columns,
-        # insert into those columns. 
-
-        # Iterate the columns, find matches
-        values = {}
-        for column in table.columns:
-            # Table.columns is fully qualified; need just the name
-            column = str(column).split('.')[1]
-            # See what fits:
-            try:
-                values[column.lower()] = data[column]
-            except KeyError:
-                # Non-matching data is discarded
-                pass
-
-        # Check that you're inserting something at all
-        if len(values) == 0:
-            raise Exception('Empty insert, probable table-value mismatch')
-           
-        # Compile the SQL
-        insert = table.insert().values(**values)
-        # Might as well return something
-        pkey = self.connection.execute(insert).inserted_primary_key
-        return pkey
 
     def insert(self, table, values):
+        # Defined just to allow shadowing by child classes
         q = table.insert(values)
-        return self.execute()
+        return self.execute(q)
 
     def updateLiveAndHist(self, liveTable, histTable, data):
         # liveTable and histTable == sqla.Table
@@ -104,15 +79,16 @@ class Database:
             # We're going to address these by pkey later, so dicts
             liveData[row[pkey]] = row
         # Now, see which records are entirely new, and which need updates.
-        print(len(data))
-        count = 0
+        print('Corroborating', len(data), 'data points.')
+        new = 0
+        updates = 0
         for datum in data:
-            count += 1
             try:
                 # Get the active record that has the same pkey.
                 relevantLiveData = liveData[datum[pkey]]
                 # If the data matches, nothing to be done. Otherwise...
                 if not datum == relevantLiveData:
+                    updates += 1
                     # When data updates, so do we!
                     # First, update the history.
                     now = datetime.now()
@@ -135,7 +111,9 @@ class Database:
                         values(datum)
                     self.execute(liveUpdate)
                     # Finally, append the new record to the live records dict.
+                    # so that we don't conflict with records from other routers
                     liveData[datum[pkey]] = datum
+                    print('Updated data for:', liveData[datum[pkey]])
                 else:
                     #print('pkey ' + datum[pkey] + ' already seen')
                     pass
@@ -144,5 +122,8 @@ class Database:
                 # There's no matching record. This is new data, so insert it.
                 # Insert is often shadowed in child classes, because of error
                 # handling.
-                print('new: ' + str(count))
+                new += 1
+                print('new: ' + str(datum))
                 self.insert(liveTable, datum)
+        print(new, 'new records.')
+        print(updates, 'updated records.')

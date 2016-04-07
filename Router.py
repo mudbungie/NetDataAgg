@@ -53,7 +53,11 @@ class Router:
                     values['ip'] = str(ip)
                     # We also want to know where the ARP record came from.
                     values['source'] = str(self.ip)
-                    arpTable.append(values)
+                    # We ignore data points that have to do with locally 
+                    # administered MAC addresses.
+                    localMacs = ['2', '6', 'a', 'e']
+                    if values['mac'][1] not in localMacs:
+                        arpTable.append(values)
                 except AssertionError:
                     pass
         return arpTable
