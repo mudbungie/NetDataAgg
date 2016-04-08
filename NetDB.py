@@ -34,10 +34,10 @@ class NetDB(Database):
 
         # Also scan the network address, because it's not a real network, but 
         # an IP range.
-        hosts = []
+        hosts = self.getRouters()
         #print('network address')
         #print(network.network_address)
-        hosts.append(Router(network.network_address, community))
+        #hosts.append(Router(network.network_address, community))
 
         for host in network.hosts():
             # Make a list of Router objects from the addresses.
@@ -49,7 +49,7 @@ class NetDB(Database):
             self.updateLiveAndHist(table, histTable, arpTable)
         return True
 
-    def updateRadius(raddb):
+    def updateRadius(self, raddb):
         radData = raddb.fetchRadData()
         table = self.tables['radius']
         histTable = self.tables['historicradius']
@@ -96,7 +96,11 @@ class NetDB(Database):
         return username
 
     def getRouters(self):
-        table = 'routers'
+        table = self.tables['routers']
         self.routers = []
         q = table.select()
-        rows = table.NOTDONE
+        rows = self.execute(q)
+        routers = []
+        for row in rows:
+            routers.append(row.managementip)
+        return routers

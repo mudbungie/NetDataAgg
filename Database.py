@@ -53,7 +53,7 @@ class Database:
         q = table.insert(values)
         return self.execute(q)
 
-    def updateLiveAndHist(self, liveTable, histTable, data):
+    def updateLiveAndHist(self, liveTable, histTable, data, pkey=None):
         # liveTable and histTable == sqla.Table
         # data == list of dicts. Dicts should be column: value.
 
@@ -69,8 +69,9 @@ class Database:
         # Read that data into a dictionary
         liveData = {}
         columns = liveTable.c.keys()
-        #pkey = liveTable.get_pk_constraint
-        pkey = sqla.engine.reflection.Inspector.from_engine(self.connection).get_primary_keys(liveTable)[0]
+        # The pkey can be specified manually, but otherwise derive it.
+        if not pkey:
+            pkey = self.inspector.get_primary_keys(liveTable)[0]
         for record in liveRecords:
             row = {}
             for column in columns:
