@@ -54,6 +54,33 @@ class Database:
         q = table.insert(values)
         return self.execute(q)
 
+    def getPkey(self, table):
+        pkey = self.inspector.from_engine(self.connection).\
+            get_primary_keys(liveTable)[0]
+        return pkey
+
+    def recordsToListofDicts(self, records, table):
+        columns = table.c.keys()
+        data = []
+        for record in records:
+            datum = {}
+            for column in columns:
+                datum[coumn] = getattr(record, column)
+            data.append(datum)
+        return data
+    
+    def recordsToDictofDicts(self, records, table):
+        ddata = {}
+        
+        pkey = self.getPkey(table)
+
+    def updateTable(self, table, data):
+        # Takes the data from a table, compares it to a list of dicts by the
+        # table's primary key, inserts new entries, updates changed entries.
+        q = table.select()
+        records = self.execute(q)
+        data = self.recordsToDicts(records)
+
     def updateLiveAndHist(self, liveTable, histTable, data, pkey=None):
         # liveTable and histTable == sqla.Table
         # data == list of dicts. Dicts should be column: value.
