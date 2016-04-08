@@ -22,11 +22,6 @@ class NetDB(Database):
                     'routers',
                     ]
     
-    def execute(self, query):
-        # Shadowing the parent class' execute function is a great way to
-        # handle DB exceptions without having to reimplement general methods
-        return self.connection.execute(query)
-
     def updateArp(self, network, community):
         # Scan all the routers in the network, update arp data.
         table = self.tables['arp']

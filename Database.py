@@ -26,7 +26,7 @@ class Database:
 
         # Initialize whatever tables this database uses
         self.initTables(self.tableNames)
-        self.inspector = sqla.engine.reflection.Inspector.from_engine(self.connection)
+        self.inspector = sqla.engine.reflection.Inspector
         return True
 
     def initDB(self, config):
@@ -46,6 +46,7 @@ class Database:
 
     def execute(self, query):
         # Just shorthand
+        # Well, and it allows descendants to shadow for specific error handling
         return self.connection.execute(query)
 
     def insert(self, table, values):
@@ -71,14 +72,23 @@ class Database:
         columns = liveTable.c.keys()
         # The pkey can be specified manually, but otherwise derive it.
         if not pkey:
-            pkey = self.inspector.get_primary_keys(liveTable)[0]
+            print('pkey was', pkey)
+            print(liveTable.name)
+            pkey = self.inspector.from_engine(self.connection).\
+                get_primary_keys(liveTable)[0]
+            print('pkey is', pkey)
         for record in liveRecords:
             row = {}
             for column in columns:
                 row[column] = getattr(record, column)
                 #print(column, row[column])
             # We're going to address these by pkey later, so dicts
-            liveData[row[pkey]] = row
+            try:
+                liveData[row[pkey]] = row
+            except KeyError:
+                print(row)
+                print(pkey)
+                raise
         # Now, see which records are entirely new, and which need updates.
         print('Corroborating', len(data), 'data points.')
         new = 0
