@@ -43,7 +43,7 @@ class NetDB(Database):
             # Make a list of Router objects from the addresses.
             router = Router(host, community)
             # Pull the router's ARP table via SNMP
-            # Returns a list of two-item dictionaries
+            # Returns a list of dictionaries
             arpTable = router.getArpTable()
             print(router.ip, 'has', len(arpTable), 'arp entries.')
             self.updateLiveAndHist(table, histTable, arpTable)

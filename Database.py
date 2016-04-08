@@ -112,7 +112,8 @@ class Database:
                         values(datum)
                     self.execute(liveUpdate)
                     # Finally, append the new record to the live records dict.
-                    # so that we don't conflict with records from other routers
+                    # so that we don't conflict with other records from the 
+                    # same batch.
                     liveData[datum[pkey]] = datum
                     print('Updated data for:', liveData[datum[pkey]])
                 else:
@@ -126,5 +127,9 @@ class Database:
                 new += 1
                 print('new: ' + str(datum))
                 self.insert(liveTable, datum)
+                # Finally, append the new record to the live records dict.
+                # so that we don't conflict with other records from the 
+                # same batch.
+                liveData[datum[pkey]] = datum
         print(new, 'new records.')
         print(updates, 'updated records.')
