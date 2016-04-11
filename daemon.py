@@ -21,9 +21,13 @@ if __name__ == '__main__':
     routers = IPv4Network(config['targets']['routers'])
     community = config['community']
     
-    netdb.updateArp(routers, community) # working, just not what I'm testing
+    #netdb.updateArp(routers, community) # working, just not what I'm testing
+    print('Updating Radius...')
     netdb.updateRadius(raddb)
-
+    print('Updating Hosts...')
+    netdb.updateHosts(zabdb)
+    print('Updating Customers...')
+    netdb.updatecustomers(fsdb)
     '''
     # Main loop
     while True:

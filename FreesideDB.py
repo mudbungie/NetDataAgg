@@ -7,7 +7,7 @@ class FreesideDB(Database):
     connectionProtocol = 'postgresql+psycopg2://'
     tableNames = ['cust_main']
 
-    def getCustomers():
+    def getCustomers(self):
         q = self.tables['cust_main'].select()
         records = self.execute(q)
         custs = []

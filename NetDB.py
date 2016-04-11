@@ -20,6 +20,7 @@ class NetDB(Database):
                     'historicradius',
                     'customers',
                     'routers',
+                    'hosts',
                     ]
     
     def updateArp(self, network, community):
@@ -34,7 +35,7 @@ class NetDB(Database):
         #print(network.network_address)
         #hosts.append(Router(network.network_address, community))
 
-        for host in network.hosts():
+        for host in hosts:
             # Make a list of Router objects from the addresses.
             router = Router(host, community)
             # Pull the router's ARP table via SNMP
@@ -51,8 +52,16 @@ class NetDB(Database):
         self.updateLiveAndHist(table, histTable, radData)
         return True
 
-    def updateCustomers(zabdb):
-        pass
+    def updateCustomers(self, fsdb):
+        customers = fsdb.getCustomers()
+        self.updateTable(customers)
+        return True
+
+    def updateHosts(self, zabdb):
+        hosts = zabdb.getHosts()
+        self.updateTable(self.tables['hosts'], hosts)
+        return True
+
     def arpLookup(ip=None, mac=None):
         table = self.initTable('arp')
 

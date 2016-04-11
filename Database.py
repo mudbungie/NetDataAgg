@@ -59,27 +59,45 @@ class Database:
             get_primary_keys(liveTable)[0]
         return pkey
 
-    def recordsToListofDicts(self, records, table):
-        columns = table.c.keys()
+    def recordsToListOfDicts(self, records, table):
+        #columns = table.c.keys()
+        columns = records.keys()
         data = []
         for record in records:
             datum = {}
             for column in columns:
-                datum[coumn] = getattr(record, column)
+                datum[column] = getattr(record, column)
             data.append(datum)
         return data
     
-    def recordsToDictofDicts(self, records, table):
-        ddata = {}
-        
+    def recordsToDictOfDicts(self, records, table):
+        columns = table.c.keys()
         pkey = self.getPkey(table)
+        ddata = {}
+        for record in records:
+            datum = {}
+            for column in columns:
+                datum[column] = getattr(record, column)
+            data[pkey] = datum
+        return data
 
-    def updateTable(self, table, data):
+    def updateTable(self, table, newdata):
         # Takes the data from a table, compares it to a list of dicts by the
         # table's primary key, inserts new entries, updates changed entries.
         q = table.select()
         records = self.execute(q)
-        data = self.recordsToDicts(records)
+        olddata = self.recordsToListOfDicts(records)
+        for newdatum in newdata:
+            try:
+                if not newdatum == olddata[newdatum[pkey]]:
+                    # Means that we have that data, but it has changed.
+                    upd = table.update().\
+                        where(table.primary_key == datum[pkey]).\
+                        values(datum)
+                    self.execute(upd)
+            except KeyError:
+                # That's a new record, insert it.
+                self.insert(table, datum)
 
     def updateLiveAndHist(self, liveTable, histTable, data, pkey=None):
         # liveTable and histTable == sqla.Table
