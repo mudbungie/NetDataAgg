@@ -22,7 +22,7 @@ class NetDB(Database):
                     'routers',
                     'hosts',
                     ]
-    
+
     def updateArp(self, network, community):
         # Scan all the routers in the network, update arp data.
         table = self.tables['arp']
@@ -54,7 +54,7 @@ class NetDB(Database):
 
     def updateCustomers(self, fsdb):
         customers = fsdb.getCustomers()
-        self.updateTable(customers)
+        self.updateTable(self.tables['customers'], customers)
         return True
 
     def updateHosts(self, zabdb):

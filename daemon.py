@@ -10,24 +10,26 @@ from Config import config
 from NetDB import NetDB
 from RadDB import RadDB
 from ZabDB import ZabDB
+from FreesideDB import FreesideDB
 from ipaddress import IPv4Network
 
 if __name__ == '__main__':
     netdb = NetDB(config['databases']['netdata'])
     raddb = RadDB(config['databases']['radius'])
     zabdb = ZabDB(config['databases']['zabbix'])
-
+    fsdb  = FreesideDB(config['databases']['freeside'])
     
     routers = IPv4Network(config['targets']['routers'])
     community = config['community']
     
-    #netdb.updateArp(routers, community) # working, just not what I'm testing
+    print('Updating Arp...')
+    netdb.updateArp(routers, community) # working, just not what I'm testing
     print('Updating Radius...')
     netdb.updateRadius(raddb)
     print('Updating Hosts...')
     netdb.updateHosts(zabdb)
     print('Updating Customers...')
-    netdb.updatecustomers(fsdb)
+    netdb.updateCustomers(fsdb)
     '''
     # Main loop
     while True:

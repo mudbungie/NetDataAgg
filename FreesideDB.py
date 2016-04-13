@@ -14,7 +14,7 @@ class FreesideDB(Database):
         for record in records:
             cust = {}
             cust['custnum'] = record.custnum
-            cust['name'] = record.name
+            cust['name'] = ' '.join([record.first, record.last])
             cust['company'] = record.company
             cust['payname'] = record.payname
             custs.append(cust)

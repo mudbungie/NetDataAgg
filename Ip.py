@@ -11,6 +11,7 @@ class Ip:
             self.ip = ip
         elif encoding == 'snmp':
             # The encoding for SNMP is all malformed.
+            print(ip)
             ipstr = '.'.join(ip.split('.')[1:])    
             # If it's a string, we need to validate it.
             #ipre = re.compile(r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}\

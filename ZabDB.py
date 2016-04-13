@@ -23,22 +23,33 @@ class ZabDB(Database):
 
     def getIpFromDirtyString(self, string):
         regex = re.compile(r'(?:[0-9]{1,3}\.){3}[0-9]{1,3}')
-        return self.searchDirtyString(regex, string)
+        ip = self.searchDirtyString(regex, string)
+        return ip
 
     def getFSIdFromDirtyString(self, string):
         regex = re.compile(r'C[0-9]{1,5}')
-        return self.searchDirtyString(regex, string).replace('C','')
+        fsid = self.searchDirtyString(regex, string)
+        if fsid:
+            return int(fsid.replace('C',''))
+        else:
+            # Null return
+            return fsid
 
     def getPkgnumFromDirtyString(self, string):
         regex = re.compile(r'P[0-9]{1,6}')
-        return self.searchDirtyString(regex, string).replace('P','')
+        pkgnum = self.searchDirtyString(regex, string)
+        if pkgnum:
+            return int(pkgnum.replace('P',''))
+        else:
+            # Null return
+            return pkgnum
 
     def searchDirtyString(self, regex, string):
         try:
             return regex.findall(string)[0]
         except IndexError:
             # In the event that nothing is found, just return an empty string.
-            return ''
+            return None
         
     def getHosts(self):
         q = self.tables['hosts'].select()

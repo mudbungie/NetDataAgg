@@ -56,11 +56,10 @@ class Database:
 
     def getPkey(self, table):
         pkey = self.inspector.from_engine(self.connection).\
-            get_primary_keys(liveTable)[0]
+            get_primary_keys(table)[0]
         return pkey
 
-    def recordsToListOfDicts(self, records, table):
-        #columns = table.c.keys()
+    def recordsToListOfDicts(self, records):
         columns = records.keys()
         data = []
         for record in records:
@@ -70,37 +69,63 @@ class Database:
             data.append(datum)
         return data
     
-    def recordsToDictOfDicts(self, records, table):
-        columns = table.c.keys()
-        pkey = self.getPkey(table)
-        ddata = {}
+    def recordsToDictOfDicts(self, records, pkey):
+        columns = records.keys()
+        data = {}
         for record in records:
             datum = {}
             for column in columns:
                 datum[column] = getattr(record, column)
-            data[pkey] = datum
+            data[datum[pkey]] = datum
         return data
 
-    def updateTable(self, table, newdata):
+    def updateTable(self, table, newdata, pkey=None):
         # Takes the data from a table, compares it to a list of dicts by the
         # table's primary key, inserts new entries, updates changed entries.
         q = table.select()
         records = self.execute(q)
-        olddata = self.recordsToListOfDicts(records)
+        if not pkey:
+            pkey = self.getPkey(table)
+        olddata = self.recordsToDictOfDicts(records, pkey)
+        new = 0
+        updated = 0
+        unchanged = 0
+        print('Corroborating', len(newdata), 'data points.')
         for newdatum in newdata:
             try:
                 if not newdatum == olddata[newdatum[pkey]]:
                     # Means that we have that data, but it has changed.
                     upd = table.update().\
-                        where(table.primary_key == datum[pkey]).\
-                        values(datum)
+                        where(table.primary_key == newdatum[pkey]).\
+                        values(newdatum)
                     self.execute(upd)
+                    updated += 1
+                else:
+                    unchanged += 1
             except KeyError:
                 # That's a new record, insert it.
-                self.insert(table, datum)
+                self.insert(table, newdatum)
+                olddata[newdatum[pkey]] = newdatum
+                new += 1
+        print(new, 'new records.')
+        print(updated, 'updated records.')
+        print(unchanged, 'unchanged records.')
 
-    def updateLiveAndHist(self, liveTable, histTable, data, pkey=None):
-        # liveTable and histTable == sqla.Table
+    def tableToDictOfDicts(self, table, pkey=None):
+        # Makes all the records into dicts, puts them in a dict organized by
+        # the table's pkey.
+        q = table.select()
+        r = self.execute(q, table)
+
+        columns = table.c.keys()
+        # So long as pkey wasn't defined, pull it from table metadata.
+        if not pkey:
+            pkey = self.getPkey(table)
+        data = self.recordsToDictOfDicts(r, pkey)
+        return data
+
+    def updateLiveAndHist(self, currentTable, histTable, data, pkey=None):
+        # currentTable and histTable == sqla.Table
         # data == list of dicts. Dicts should be column: value.
 
         # This is a generalized method for updating two tables at once, one of
@@ -108,71 +133,60 @@ class Database:
         # new information, timestamps the history, and adds a new historic
         # record for the new data
 
-        # Pull the live data, because a single select is faster than hitting 
+        # Pull the current data, because a single select is faster than hitting 
         # the DB for each record.
-        liveq = liveTable.select()
-        liveRecords = self.execute(liveq)
+        currentq = currentTable.select()
+        currentRecords = self.execute(currentq)
         # Read that data into a dictionary
-        liveData = {}
-        columns = liveTable.c.keys()
+        currentData = {}
+        columns = currentTable.c.keys()
         # The pkey can be specified manually, but otherwise derive it.
         if not pkey:
-            print('pkey was', pkey)
-            print(liveTable.name)
-            pkey = self.inspector.from_engine(self.connection).\
-                get_primary_keys(liveTable)[0]
-            print('pkey is', pkey)
-        for record in liveRecords:
-            row = {}
-            for column in columns:
-                row[column] = getattr(record, column)
-                #print(column, row[column])
-            # We're going to address these by pkey later, so dicts
-            try:
-                liveData[row[pkey]] = row
-            except KeyError:
-                print(row)
-                print(pkey)
-                raise
+            pkey = self.getPkey(currentTable)
+        # Everything is easier with dictionaries...
+        currentData = self.recordsToDictOfDicts(currentRecords, pkey)
+
         # Now, see which records are entirely new, and which need updates.
         print('Corroborating', len(data), 'data points.')
         new = 0
         updates = 0
+        unchanged = 0
         for datum in data:
             try:
                 # Get the active record that has the same pkey.
-                relevantLiveData = liveData[datum[pkey]]
+                relevantCurrentData = currentData[datum[pkey]]
                 # If the data matches, nothing to be done. Otherwise...
-                if not datum == relevantLiveData:
+                if not datum == relevantCurrentData:
                     updates += 1
                     # When data updates, so do we!
                     # First, update the history.
                     now = datetime.now()
                     # First, expire the current historical item.
-                    histFilter = sqla.and_(histTable.c.expired != None,
-                        histTable.primary_key == datum[pkey])
+                    histFilter = sqla.and_(histTable.c.expired == None,
+                        getattr(histTable.c, pkey) == datum[pkey])
                     histExpire = histTable.update().where(histFilter).values({'expired':now})
                     self.execute(histExpire)
                     # Now, make a new historic record
                     # We do this in a memory inefficient manner, because in 
                     # case of failure, action condition is still met, because
-                    # the live table hasn't been updated.
+                    # the current table hasn't been updated.
                     histDatum = datum.copy()
                     histDatum['observed'] = now
                     histInsert = histTable.insert().values(histDatum)
                     self.execute(histInsert)
-                    # The, update the live data.
-                    liveUpdate = liveTable.update().\
-                        where(liveTable.primary_key == datum[pkey]).\
+                    # The, update the current data.
+                    currentUpdate = currentTable.update().\
+                        where(getattr(currentTable.c, pkey) == datum[pkey]).\
                         values(datum)
-                    self.execute(liveUpdate)
-                    # Finally, append the new record to the live records dict.
+                    print(currentUpdate)
+                    self.execute(currentUpdate)
+                    # Finally, append the new record to the current records dict.
                     # so that we don't conflict with other records from the 
                     # same batch.
-                    liveData[datum[pkey]] = datum
-                    print('Updated data for:', liveData[datum[pkey]])
+                    currentData[datum[pkey]] = datum
+                    print('Updated data for:', currentData[datum[pkey]])
                 else:
-                    #print('pkey ' + datum[pkey] + ' already seen')
+                    unchanged += 1
                     pass
 
             except KeyError:
@@ -181,10 +195,11 @@ class Database:
                 # handling.
                 new += 1
                 print('new: ' + str(datum))
-                self.insert(liveTable, datum)
-                # Finally, append the new record to the live records dict.
+                self.insert(currentTable, datum)
+                # Finally, append the new record to the current records dict.
                 # so that we don't conflict with other records from the 
                 # same batch.
-                liveData[datum[pkey]] = datum
+                currentData[datum[pkey]] = datum
         print(new, 'new records.')
         print(updates, 'updated records.')
+        print(unchanged, 'unchanged records.')
