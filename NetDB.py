@@ -22,7 +22,7 @@ class NetDB(Database):
                     'historicradius',
                     'customers',
                     'routers',
-                    'hosts',
+                    'zabhosts',
                     'bridged_hosts',
                     ]
 
@@ -62,7 +62,7 @@ class NetDB(Database):
 
     def updateHosts(self, zabdb):
         hosts = zabdb.getHosts()
-        self.updateTable(self.tables['hosts'], hosts)
+        self.updateTable(self.tables['zabhosts'], hosts)
         return True
 
     def arpLookup(ip=None, mac=None):
@@ -91,6 +91,15 @@ class NetDB(Database):
         else:
             # Gotta give one or the other
             return False
+
+    def getArps(self):
+        table = self.tables['arp']
+        arpRecords = self.execute(table.select())
+        arps = []
+        for record in arpRecords:
+            # Make a little dict
+            arps.append({'ip':record.ip,'mac':record.mac})
+        return arps
 
     def radLookup(mac):
         table = self.initTable('radius')
@@ -151,7 +160,7 @@ class NetDB(Database):
     def getNetworkHosts(self):
         # Checks Zabbix for registered IP addresses, and returns a list of host
         # objects.
-        hostsTable = self.tables['hosts']
+        hostsTable = self.tables['zabhosts']
         q = hostsTable.select()
         hostRecords = self.execute(q)
 

@@ -24,7 +24,7 @@ class Host:
 
     def snmpInit(self):
         self.session = easysnmp.Session(hostname=self.ip,
-            community=config['snmp']['radiocommunity'], version=1, timeout=1)
+            community=config['snmp']['radiocommunity'], version=1, timeout=0.5)
 
     def snmpwalk(self, mib):
         # Walks specified mib
@@ -38,6 +38,13 @@ class Host:
         except easysnmp.exceptions.EasySNMPTimeoutError:
             # Either the community string is wrong, or the address is dead.
             return False
+
+    @property
+    def interfaces(self):
+        return self.__interfaces
+    @interfaces.setter
+    def interfaces(self, interfaces):
+        self.__interfaces = interfaces
 
     def getInterfaces(self):
         # Use SNMP to retrieve info about the interfaces.
@@ -60,8 +67,10 @@ class Host:
                     interface.label = label
                     #print(interface, interface.label)
                     self.interfaces.append(interface)
+            return self.interfaces
         else:
             self.online = False
+            return None
     
     def getStatusPage(self):
         # Take the 
@@ -121,9 +130,9 @@ class Host:
     def hasBridge(self):
         # Pull the interface list if it's not already done.
         if len(self.interfaces) == 0:
-            print(self.ip)
+            #print(self.ip)
             self.getInterfaces()
-            print('finished scan')
+            #print('finished scan')
         # We'll be comparing different classes of interfaces.
         ath = []
         eth = []
@@ -137,16 +146,18 @@ class Host:
             elif interface.label[0:2] == 'br':
                 br.append(interface.mac)
         # Oddness for efficiency.
-        print('ath',ath)
-        print('eth',eth)
-        print('br',br)
+        #print('ath',ath)
+        #print('eth',eth)
+        #print('br',br)
         intersection = [mac for mac in ath if mac in set(eth + br)]
         if len(intersection) > 0:
             # If there are any matches, send the bridged MAC address.
-            print('dupes')
+            #print('dupes')
+            self.bridge = intersection
             return intersection[0]
         else:
-            print('nodupes')
+            #print('nodupes')
+            self.isBridged = False
             return False
 
 # testing

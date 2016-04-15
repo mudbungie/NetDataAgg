@@ -12,6 +12,7 @@ from RadDB import RadDB
 from ZabDB import ZabDB
 from FreesideDB import FreesideDB
 from ipaddress import IPv4Network
+from Network import Network
 
 if __name__ == '__main__':
     netdb = NetDB(config['databases']['netdata'])
@@ -22,7 +23,7 @@ if __name__ == '__main__':
     routers = IPv4Network(config['targets']['routers'])
     community = config['snmp']['routercommunity']
     
-    '''
+    print('###Updating all resources###')
     print('Updating Arp...')
     netdb.updateArp(routers, community)
     print('Updating Radius...')
@@ -31,11 +32,20 @@ if __name__ == '__main__':
     netdb.updateHosts(zabdb)
     print('Updating Customers...')
     netdb.updateCustomers(fsdb)
+
+    network = Network(netdb)
+    # This will just core dump... haven't solved multithreading.
+    #network.getHosts()
+
+    #for host in network.hosts:
+    #    print(host)
+    '''
     print('Diagnosing Zabbix/Arp mismatches...')
     netdb.checkZabbixAgainstArp()
-    '''
     print('Checking for bridged connections...')
     netdb.checkForBridgedHosts()
+    '''
+
     '''
     # Main loop
     while True:
