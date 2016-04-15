@@ -1,6 +1,7 @@
 # Not mine
 import sqlalchemy as sqla
 from datetime import datetime
+import os
 # Mine
 from Database import Database
 from Router import Router
@@ -147,6 +148,22 @@ class NetDB(Database):
             'detected on a different link.')
         print('There are', len(unknown), 'undiagnosed hosts.')
 
+    def getNetworkHosts(self):
+        # Checks Zabbix for registered IP addresses, and returns a list of host
+        # objects.
+        hostsTable = self.tables['hosts']
+        q = hostsTable.select()
+        hostRecords = self.execute(q)
+
+        hosts = []
+        for hostRecord in hostRecords:
+            # Double check that there is a recorded address.
+            if hostRecord.ip:
+                # Make a network object out of them.
+                host = Host(hostRecord.ip)
+                hosts.append(host)
+        return hosts
+
     def checkForBridgedHosts(self):
         # Get all known bridges
         bHostsTable = self.tables['bridged_hosts']
@@ -157,37 +174,34 @@ class NetDB(Database):
             # Make it a dict
             knownBridges[bridgeRecord.ip] = bridgeRecord.mac
             
-        # Get all hosts
-        hostsTable = self.tables['hosts']
-        q = hostsTable.select()
-        hostRecords = self.execute(q)
-        for hostRecord in hostRecords:
-            # Double check that there is a recorded address.
-            if hostRecord.ip:
-                # Make a network object out of them.
-                host = Host(hostRecord.ip)
-                # And scan their interfaces for redundant MAC addresses.
-                bridgedMac = host.hasBridge()
-                # Will be false if there are no bridges.
-                if bridgedMac:
-                    print(1)
-                    liveBridge = {'ip':host.ip,'mac':bridgedMac}
-                    try:
-                        if bridgedMac != knownBridges[host.ip]:
-                            # If it's changed, update. Otherwise, do nothing.
-                            q = bHostsTable.update().\
-                                where(bhostsTable.c.ip == host.ip).\
-                                values(liveBridge)
-                            self.execute(q)
+        hosts = self.getNetworkHosts()
+        newPid = 0
+        for host in hosts:
+            # These scans are time-consuming, but simple, so fork.
+            if newPid == 0:
+                newPid = os.fork() 
+                if newPid != 0:
+                    # And scan their interfaces for redundant MAC addresses.
+                    bridgedMac = host.hasBridge()
+                    # Will be false if there are no bridges.
+                    if bridgedMac:
+                        liveBridge = {'ip':host.ip,'mac':bridgedMac}
+                        try:
+                            if bridgedMac != knownBridges[host.ip]:
+                                # If it's changed, update. Otherwise, do nothing.
+                                q = bHostsTable.update().\
+                                    where(bhostsTable.c.ip == host.ip).\
+                                    values(liveBridge)
+                                self.execute(q)
+                                knownBridges[host.ip] = bridgedMac
+                        except KeyError:
+                            # It's a newly discovered bridged. Insert it.
+                            self.insert(bHostsTable, liveBridge)
                             knownBridges[host.ip] = bridgedMac
-                    except KeyError:
-                        # It's a newly discovered bridged. Insert it.
-                        self.insert(bHostsTable, liveBridge)
-                        knownBridges[host.ip] = bridgedMac
-                else:
-                    # It's not a bridge, gotta make sure that it's not hanging
-                    # around in the table.
-                    if host.ip in knownBridges:
-                        q = bHostsTable.delete().\
-                            where(bhostsTable.c.ip == host.ip)
-                        self.execute(q)
+                    else:
+                        # It's not a bridge, gotta make sure that it's not hanging
+                        # around in the table.
+                        if host.ip in knownBridges:
+                            q = bHostsTable.delete().\
+                                where(bhostsTable.c.ip == host.ip)
+                            self.execute(q)

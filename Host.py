@@ -24,7 +24,7 @@ class Host:
 
     def snmpInit(self):
         self.session = easysnmp.Session(hostname=self.ip,
-            community=config['snmp']['radiocommunity'], version=1)
+            community=config['snmp']['radiocommunity'], version=1, timeout=1)
 
     def snmpwalk(self, mib):
         # Walks specified mib
@@ -120,9 +120,10 @@ class Host:
 
     def hasBridge(self):
         # Pull the interface list if it's not already done.
-        if len(self.interfaces) != 0:
+        if len(self.interfaces) == 0:
+            print(self.ip)
             self.getInterfaces()
-        print(len(self.interfaces))
+            print('finished scan')
         # We'll be comparing different classes of interfaces.
         ath = []
         eth = []
@@ -134,7 +135,7 @@ class Host:
             elif interface.label[0:3] == 'eth':
                 eth.append(interface.mac)
             elif interface.label[0:2] == 'br':
-                br.append[interface.mac]
+                br.append(interface.mac)
         # Oddness for efficiency.
         print('ath',ath)
         print('eth',eth)
@@ -142,8 +143,10 @@ class Host:
         intersection = [mac for mac in ath if mac in set(eth + br)]
         if len(intersection) > 0:
             # If there are any matches, send the bridged MAC address.
+            print('dupes')
             return intersection[0]
         else:
+            print('nodupes')
             return False
 
 # testing
