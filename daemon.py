@@ -20,16 +20,22 @@ if __name__ == '__main__':
     fsdb  = FreesideDB(config['databases']['freeside'])
     
     routers = IPv4Network(config['targets']['routers'])
-    community = config['community']
+    community = config['snmp']['routercommunity']
     
+    '''
     print('Updating Arp...')
-    netdb.updateArp(routers, community) # working, just not what I'm testing
+    netdb.updateArp(routers, community)
     print('Updating Radius...')
     netdb.updateRadius(raddb)
     print('Updating Hosts...')
     netdb.updateHosts(zabdb)
     print('Updating Customers...')
     netdb.updateCustomers(fsdb)
+    print('Diagnosing Zabbix/Arp mismatches...')
+    netdb.checkZabbixAgainstArp()
+    '''
+    print('Checking for bridged connections...')
+    netdb.checkForBridgedHosts()
     '''
     # Main loop
     while True:

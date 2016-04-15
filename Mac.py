@@ -3,8 +3,8 @@
 import re
 from binascii import hexlify
 
-class Mac:
-    def __new__(self, mac, encoding=None):
+class Mac(str):
+    def __new__(cls, mac, encoding=None):
         # Usually, I'll be passing a string, but not always, so encodings.
         if not encoding:
             macstr = mac.lower().replace('-',':')
@@ -23,10 +23,6 @@ class Mac:
         # Validate!
         macre = re.compile(r'([a-f0-9]{2}[:]?){6}')
         if not macre.match(macstr):
-            #print(mac)
-            raise Exception('Not a MAC address!')
+            raise Exception('Not a MAC address:', macstr)
 
-        self.mac = macstr
-        return macstr
-    #def __str__(self):
-    #    return self.mac.__str__()
+        return super(Mac, cls).__new__(cls, macstr)
