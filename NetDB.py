@@ -6,6 +6,7 @@ import os
 from Database import Database
 from Router import Router
 from Mac import Mac
+from Ip import Ip
 from Host import Host
 
 class NetDB(Database):
@@ -65,7 +66,7 @@ class NetDB(Database):
         self.updateTable(self.tables['zabhosts'], hosts)
         return True
 
-    def arpLookup(ip=None, mac=None):
+    def arpLookup(self, ip=None, mac=None):
         table = self.initTable('arp')
 
         if ip:
