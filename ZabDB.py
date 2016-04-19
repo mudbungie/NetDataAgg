@@ -58,6 +58,7 @@ class ZabDB(Database):
         for record in records:
             host = {}
             host['hostid'] = record.hostid
+            host['hostname'] = record.name
             host['mac'] = self.getHostMac(host['hostid'])
             # This field is so dirty
             host['ip'] = self.getIpFromDirtyString(record.host)

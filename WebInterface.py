@@ -25,6 +25,10 @@ def listToTable(columns, data):
         elif type(datum) == list or issubclass(type(datum),list):
             for item in datum:
                 html += '<td>' + item + '</td>'
+        # If it's a dict, do matching to the column names.
+        elif type(datum) == dict or issubclass(type(datum),dict):
+            for i in range(len(columns)):
+                html += '<td>' + datum[columns[i]] + '</td>'
         html += '</tr>\n'
     html += '</table>'
     return html

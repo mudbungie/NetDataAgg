@@ -48,9 +48,20 @@ def ipToMac():
         return 'No matches for that IP address.'
     table = WebInterface.listToTable(['MAC'], answers)
     return WebInterface.pageWrap(table)
+
 @ndabottle.get('/zabbix-arp-mismatches')
 def getMismatches():
     print('Getting zabbix-arp')
+
+@ndabottle.get('/bad-usernames')
+def getBadUsernames():
+    answers = netdb.getBadUsernames()
+    print('There are', len(answers), 'bad usernames.')
+    # Gonna make all the IP addresses into hyperlinks.
+    for answer in answers:
+        answer['ip'] = '<a href="http://'+answer['ip']+'">'+answer['ip']+'</a>'
+    table = WebInterface.listToTable(['hostname', 'username', 'ip'], answers)
+    return WebInterface.pageWrap(table)
     
 
 ndabottle.run(host='127.0.0.1', port=6001)

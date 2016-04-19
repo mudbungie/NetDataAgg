@@ -2,6 +2,7 @@
 import sqlalchemy as sqla
 from datetime import datetime
 import os
+import re
 # Mine
 from Database import Database
 from Router import Router
@@ -24,7 +25,9 @@ class NetDB(Database):
                     'customers',
                     'routers',
                     'zabhosts',
+                    'hosts',
                     'bridged_hosts',
+                    'bad_usernames',
                     ]
 
     def updateArp(self, network, community):
@@ -215,3 +218,27 @@ class NetDB(Database):
                             q = bHostsTable.delete().\
                                 where(bhostsTable.c.ip == host.ip)
                             self.execute(q)
+
+    def updateBadUsernames(self):
+        # Checks to see what hosts don't contain their radius username in their
+        # hostname. 
+        table = self.tables['hosts']
+        hosts = self.execute(table.select())
+        bad_usernames = []
+        for host in hosts:
+            # Extraneous text won't show up in the username.
+            #custnum = ''.join(c for c in host.username if c.isdigit())
+            custnum = re.match(r'^[0-9]*', host.username).group()
+            # Test if it's missing the username, or username lacks numbers.
+            if len(custnum) == 0 or not custnum in host.hostname:
+                bad_username = {'hostname':host.hostname,
+                    'username':host.username,
+                    'ip':host.ip}
+                bad_usernames.append(bad_username)
+        self.updateTable(self.tables['bad_usernames'], bad_usernames)
+
+    def getBadUsernames(self):
+        table = self.tables['bad_usernames']
+        records = self.execute(table.select())
+        badUsernames = self.recordsToListOfDicts(records)
+        return badUsernames

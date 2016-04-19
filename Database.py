@@ -87,9 +87,12 @@ class Database:
         if not pkey:
             pkey = self.getPkey(table)
         olddata = self.recordsToDictOfDicts(records, pkey)
+        # This is for deleting things later.
+        unmatched = olddata.copy()
         new = 0
         updated = 0
         unchanged = 0
+        purged = 0
         print('Corroborating', len(newdata), 'data points.')
         for newdatum in newdata:
             try:
@@ -98,17 +101,29 @@ class Database:
                     upd = table.update().\
                         where(getattr(table.c, pkey) == newdatum[pkey]).\
                         values(newdatum)
+                    self.execute(upd)
                     updated += 1
                 else:
                     unchanged += 1
+                # Either way, the record still exists, so don't delete it.
+                del unmatched[newdatum[pkey]]
             except KeyError:
                 # That's a new record, insert it.
                 self.insert(table, newdatum)
+                # Toss it into the known list, to avoid conflicts.
                 olddata[newdatum[pkey]] = newdatum
                 new += 1
+        # Then, go over the old data, and purge anything that didn't match.
+        for datum in unmatched:
+            delete = table.delete().\
+                where(getattr(table.c, pkey) == datum)
+            self.execute(delete)
+            purged += 1
+
         print(new, 'new records.')
         print(updated, 'updated records.')
         print(unchanged, 'unchanged records.')
+        print(purged, 'purged records.')
 
     def tableToDictOfDicts(self, table, pkey=None):
         # Makes all the records into dicts, puts them in a dict organized by
@@ -177,13 +192,13 @@ class Database:
                     currentUpdate = currentTable.update().\
                         where(getattr(currentTable.c, pkey) == datum[pkey]).\
                         values(datum)
-                    print(currentUpdate)
+                    #print(currentUpdate)
                     self.execute(currentUpdate)
                     # Finally, append the new record to the current records dict.
                     # so that we don't conflict with other records from the 
                     # same batch.
                     currentData[datum[pkey]] = datum
-                    print('Updated data for:', currentData[datum[pkey]])
+                    #print('Updated data for:', currentData[datum[pkey]])
                 else:
                     unchanged += 1
                     pass
