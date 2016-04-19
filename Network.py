@@ -12,6 +12,7 @@ class Network:
 
     def initHost(ip):
         host = Host(ip)
+        print(ip)
         host.getInterfaces()
         host.hasBridge()
         return host

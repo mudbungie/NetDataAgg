@@ -48,5 +48,10 @@ def ipToMac():
         return 'No matches for that IP address.'
     table = WebInterface.listToTable(['MAC'], answers)
     return WebInterface.pageWrap(table)
+@ndabottle.get('/zabbix-arp-mismatches')
+def getMismatches():
+    print('Getting zabbix-arp')
+    
 
 ndabottle.run(host='127.0.0.1', port=6001)
+

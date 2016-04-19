@@ -96,9 +96,8 @@ class Database:
                 if not newdatum == olddata[newdatum[pkey]]:
                     # Means that we have that data, but it has changed.
                     upd = table.update().\
-                        where(table.primary_key == newdatum[pkey]).\
+                        where(getattr(table.c, pkey) == newdatum[pkey]).\
                         values(newdatum)
-                    self.execute(upd)
                     updated += 1
                 else:
                     unchanged += 1

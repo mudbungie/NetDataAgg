@@ -7,10 +7,10 @@ import re
 
 class ZabDB(Database):
     connectionProtocol = 'postgresql+psycopg2://'
-    tableNames = ['hosts', 'hosts_macs']
+    tableNames = ['hosts', 'host_mac']
 
     def getHostMac(self, hostid):
-        table = self.tables['hosts_macs']
+        table = self.tables['host_mac']
         q = table.select().\
             where(table.c.hostid == hostid)
         try:

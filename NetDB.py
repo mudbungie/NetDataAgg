@@ -127,9 +127,9 @@ class NetDB(Database):
         # different MAC address, that can be cause for alarm.
 
         #FIXME Use the ORM
-        q = 'select hosts.mac as zabmac, hosts.ip, arp.mac as arpmac from ' +\
-                'hosts, arp where hosts.mac is not null and hosts.ip is not '+\
-                'null and hosts.ip = arp.ip and hosts.mac != arp.mac;'
+        q = 'select zabhosts.mac as zabmac, zabhosts.ip, arp.mac as arpmac from ' +\
+                'zabhosts, arp where zabhosts.mac is not null and zabhosts.ip is not '+\
+                'null and zabhosts.ip = arp.ip and zabhosts.mac != arp.mac;'
         mismatches = self.execute(q)
         offline = []
         unknown = []

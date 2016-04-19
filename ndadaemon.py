@@ -28,23 +28,26 @@ if __name__ == '__main__':
     netdb.updateArp(routers, community)
     print('Updating Radius...')
     netdb.updateRadius(raddb)
+    
     print('Updating Hosts...')
     netdb.updateHosts(zabdb)
+   
     print('Updating Customers...')
     netdb.updateCustomers(fsdb)
-
+    
     network = Network(netdb)
     # This will just core dump... haven't solved multithreading.
     #network.getHosts()
 
     #for host in network.hosts:
     #    print(host)
-    '''
+    
     print('Diagnosing Zabbix/Arp mismatches...')
     netdb.checkZabbixAgainstArp()
-    print('Checking for bridged connections...')
-    netdb.checkForBridgedHosts()
-    '''
+    
+    #print('Checking for bridged connections...')
+    #netdb.checkForBridgedHosts()
+    
 
     '''
     # Main loop
