@@ -22,7 +22,11 @@ if __name__ == '__main__':
     
     routers = IPv4Network(config['targets']['routers'])
     community = config['snmp']['routercommunity']
+<<<<<<< HEAD
         
+=======
+    '''    
+>>>>>>> 570bba4d4acee88571edb76bdca8b3e95844ccaa
     print('###Updating all resources###')
     print('Updating Arp...')
     netdb.updateArp(routers, community)
@@ -44,11 +48,18 @@ if __name__ == '__main__':
     
     print('Diagnosing Zabbix/Arp mismatches...')
     netdb.checkZabbixAgainstArp()
+<<<<<<< HEAD
     
     print('Diagnosing Radius/Hostname mismatches...')
     netdb.updateBadUsernames()
     
     # Also core dumps; multithreading...
+=======
+    '''
+    print('Diagnosing Radius/Hostname mismatches...')
+    netdb.updateBadUsernames()
+    
+>>>>>>> 570bba4d4acee88571edb76bdca8b3e95844ccaa
     #print('Checking for bridged connections...')
     #netdb.checkForBridgedHosts()
     
