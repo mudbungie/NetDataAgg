@@ -15,11 +15,11 @@ from ipaddress import IPv4Network
 from Network import Network
 
 initdbs = True
-scanrouters = True
-updatedbs = True
-checkarp = True
-checkusernames = True
-scannetwork = False
+scanrouters = False
+updatedbs = False
+checkarp = False
+checkusernames = False
+scannetwork = True
 
 if __name__ == '__main__':
     if initdbs:
@@ -51,8 +51,9 @@ if __name__ == '__main__':
     
     if scannetwork:
         network = Network(netdb)
-    # This will just core dump... haven't solved multithreading.
-    #network.getHosts()
+        # This will just core dump... haven't solved multithreading.
+        network.getHosts()
+        #netdb.checkForBridgedHosts()
 
     #for host in network.hosts:
     #    print(host)

@@ -2,6 +2,7 @@
 import sqlalchemy as sqla
 from datetime import datetime
 import os
+import time
 import re
 # Mine
 from Database import Database
@@ -191,33 +192,48 @@ class NetDB(Database):
         newPid = 0
         for host in hosts:
             # These scans are time-consuming, but simple, so fork.
-            if newPid == 0:
-                newPid = os.fork() 
-                if newPid != 0:
-                    # And scan their interfaces for redundant MAC addresses.
-                    bridgedMac = host.hasBridge()
-                    # Will be false if there are no bridges.
-                    if bridgedMac:
-                        liveBridge = {'ip':host.ip,'mac':bridgedMac}
-                        try:
-                            if bridgedMac != knownBridges[host.ip]:
-                                # If it's changed, update. Otherwise, do nothing.
-                                q = bHostsTable.update().\
-                                    where(bhostsTable.c.ip == host.ip).\
-                                    values(liveBridge)
-                                self.execute(q)
-                                knownBridges[host.ip] = bridgedMac
-                        except KeyError:
-                            # It's a newly discovered bridged. Insert it.
-                            self.insert(bHostsTable, liveBridge)
-                            knownBridges[host.ip] = bridgedMac
-                    else:
-                        # It's not a bridge, gotta make sure that it's not hanging
-                        # around in the table.
-                        if host.ip in knownBridges:
-                            q = bHostsTable.delete().\
-                                where(bhostsTable.c.ip == host.ip)
-                            self.execute(q)
+            time.sleep(.1) # Don't flood so bad
+            if newPid == 0: # If you're the parent
+                try:
+                    newPid = os.fork() 
+                    if newPid != 0: # If you're not the parent
+                        finished = False
+                        while not finished:
+                            # And scan their interfaces for redundant MAC addresses.
+                            bridgedMac = host.hasBridge()
+                            # Will be false if there are no bridges.
+                            if bridgedMac:
+                                liveBridge = {'ip':host.ip,'mac':bridgedMac}
+                                try:
+                                    if bridgedMac != knownBridges[host.ip]:
+                                        # If it's changed, update.
+                                        q = bHostsTable.update().\
+                                            where(bhostsTable.c.ip == host.ip).\
+                                            values(liveBridge)
+                                        self.execute(q)
+                                        knownBridges[host.ip] = bridgedMac
+                                        finished = True
+                                    else:
+                                        # Unchanged: do nothing.
+                                        finished = True
+                                except KeyError:
+                                    # It's a newly discovered bridged. Insert it.
+                                    self.insert(bHostsTable, liveBridge)
+                                    knownBridges[host.ip] = bridgedMac
+                                    finished = True
+                            else:
+                                # It's not a bridge, gotta make sure that it's not hanging
+                                # around in the table.
+                                if host.ip in knownBridges:
+                                    q = bHostsTable.delete().\
+                                        where(bhostsTable.c.ip == host.ip)
+                                    self.execute(q)
+                                    finished = True
+                except BlockingIOError:
+                    # Means that the OS wouldn't let us spawn processes that fast.
+                    # Just try again.
+                    pass
+        print('done')
 
     def updateBadUsernames(self):
         # Checks to see what hosts don't contain their radius username in their
