@@ -3,6 +3,7 @@
 from Host import Host
 
 def initHost(ip):
+    print('Scanning', ip)
     host = Host(ip)
     host.getInterfaces()
     host.hasBridge()
