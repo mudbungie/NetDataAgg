@@ -30,7 +30,7 @@ class NetDB(Database):
                     'bad_usernames',
                     ]
 
-    def updateArp(self, network, community):
+    def updateArp(self, community):
         # Scan all the routers in the network, update arp data.
         table = self.tables['arp']
         histTable = self.tables['historicarp']
