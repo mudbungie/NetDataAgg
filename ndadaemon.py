@@ -14,43 +14,48 @@ from FreesideDB import FreesideDB
 from ipaddress import IPv4Network
 from Network import Network
 
-if __name__ == '__main__':
-    netdb = NetDB(config['databases']['netdata'])
-    raddb = RadDB(config['databases']['radius'])
-    zabdb = ZabDB(config['databases']['zabbix'])
-    fsdb  = FreesideDB(config['databases']['freeside'])
-    
-    community = config['snmp']['routercommunity']
+initdbs = True
+scanrouters = True
+updatedbs = True
+checkarp = True
+checkusernames = True
+scannetwork = False
 
-    print('###Updating all resources###')
-    print('Updating Arp...')
-    netdb.updateArp(community)
-    print('Updating Radius...')
-    netdb.updateRadius(raddb)
+if __name__ == '__main__':
+    if initdbs:
+        netdb = NetDB(config['databases']['netdata'])
+        raddb = RadDB(config['databases']['radius'])
+        zabdb = ZabDB(config['databases']['zabbix'])
+        fsdb  = FreesideDB(config['databases']['freeside'])
+        
+    if scanrouters:
+        print('Updating Arp...')
+        community = config['snmp']['routercommunity']
+        netdb.updateArp(community)
+
+    if scanrouters:
+        print('Updating Radius...')
+        netdb.updateRadius(raddb)
+        print('Updating Hosts...')
+        netdb.updateHosts(zabdb)
+        print('Updating Customers...')
+        netdb.updateCustomers(fsdb)
     
-    print('Updating Hosts...')
-    netdb.updateHosts(zabdb)
-   
-    print('Updating Customers...')
-    netdb.updateCustomers(fsdb)
+    if checkarp:
+        print('Diagnosing Zabbix/Arp mismatches...')
+        netdb.checkZabbixAgainstArp()
     
-    network = Network(netdb)
+    if checkusernames:
+        print('Diagnosing Radius/Hostname mismatches...')
+        netdb.updateBadUsernames()
+    
+    if scannetwork:
+        network = Network(netdb)
     # This will just core dump... haven't solved multithreading.
     #network.getHosts()
 
     #for host in network.hosts:
     #    print(host)
-    
-    print('Diagnosing Zabbix/Arp mismatches...')
-    netdb.checkZabbixAgainstArp()
-    
-    print('Diagnosing Radius/Hostname mismatches...')
-    netdb.updateBadUsernames()
-    
-
-    
-    print('Diagnosing Radius/Hostname mismatches...')
-    netdb.updateBadUsernames()
     
     # Also core dumps; multithreading...
     #print('Checking for bridged connections...')
