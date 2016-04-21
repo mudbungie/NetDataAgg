@@ -10,15 +10,16 @@ import re
 # Mine
 from Ip import Ip
 from Mac import Mac
+from Host import Host
 
-class Router:
+class Router(Host):
     def __init__(self, ip, community):
-        # First, double check that IP is actually an IP
-        self.ip = Ip(ip)
-
+        # Do the normal things for any network object.
+        self.hostinit(ip)
         # Initiate SNMP
         self.session = Session(hostname=str(self.ip), community=community,
             version=1)
+
 
     def walk(self, mib):
         # Walks the specified mib
@@ -26,7 +27,7 @@ class Router:
             responses = self.session.walk(mib)
             return responses
         except easysnmp.exceptions.EasySNMPNoSuchNameError:
-            # Probably meanas that you're hitting the wrong kind of device
+            # Probably means that you're hitting the wrong kind of device
             return False
         except easysnmp.exceptions.EasySNMPTimeoutError:
             # Either the community string is wrong, or you're pinging dead space
@@ -61,4 +62,9 @@ class Router:
                 except AssertionError:
                     pass
         return arpTable
-            
+
+    def getRoutingTable(self):
+        # Walk the routing table
+        # I'm just running the direct oid
+        mib = '1.3.6.1.2.1.4.24.4.1'
+        responses = self.walk(mib)

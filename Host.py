@@ -14,10 +14,14 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 class Host:
     def __init__(self, ip):
+        self.hostinit(ip)
+
+    def hostinit(self, ip):
         # A host needs at least an IP address.
         # Which I'll pass two a string subclass for validation.
         self.ip = Ip(ip)
-        self.interfaces = []
+        self.interfaces = {}
+        self.arpNeighbors = {}
     
     def __str__(self):
         return self.ip
@@ -39,12 +43,24 @@ class Host:
             # Either the community string is wrong, or the address is dead.
             return False
 
+    # Set during init
     @property
     def interfaces(self):
         return self.__interfaces
     @interfaces.setter
     def interfaces(self, interfaces):
         self.__interfaces = interfaces
+
+    # Set during init
+    @property
+    def arpNeighbors(self):
+        return self.__arpNeighbors
+    @arpNeighbors.setter
+    def arpNeighbors(self, arpNeighbors):
+        self.__arpNeighbors = arpNeighbors
+
+    def getRouter(self):
+        routers = (host for host in arpNeighbors.items() if type(host) == Router)
 
     def getInterfaces(self):
         # Use SNMP to retrieve info about the interfaces.

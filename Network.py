@@ -6,12 +6,68 @@ from operator import itemgetter
 import re
 
 from Host import Host
+from Router import Router
 from Interface import Interface
 import functions
 
 class Network:
     def __init__(self, netdb):
+        # It's just going to be clearer in terms of namespacing if the DB is 
+        # attached.
         self.netdb = netdb
+        self.hosts = {}
+
+    # Hosts are a dict by IP
+    @property
+    def hosts(self):
+        return self.__hosts
+    @hosts.setter
+    def hosts(self, hosts):
+        self.__hosts = hosts
+    @property
+    def routerCommunity(self):
+        return self.__routerCommunity
+    @routerCommunity.setter
+    def routerCommunity(self, routerCommunity):
+        self.__routerCommunity = routerCommunity
+    # Routers are also a dict by IP, but they need SNMP creds on init.
+    @property
+    def routers(self):
+        return self.__routers
+    @routers.setter
+    def routers(self, ips):
+        self.__routers = {}
+        for ip in ips:
+            router = Router(ip, self.routerCommunity)
+            self.__routers[ip] = router
+            # Any router is also a host.
+            self.hosts[ip] = router
+
+    def getHosts(self):
+        # First, collect all of the ARP data from each of the routers.
+        arpTable = []
+        for router in self.routers.values():
+            # Tack together their routing tables.
+            arpTable += router.getArpTable()
+
+        # We're going to iterate over all the arps, and turn them into hosts.
+        for arp in arpTable:
+            ip = arp['ip']
+            mac = arp['mac']
+            source = self.routers[arp['source']]
+            interface = Interface(mac)
+            interface.ip = ip
+            try:
+                # Assuming that this host exists.
+                host = self.hosts[ip]
+            except KeyError:
+                # If it doesn't, then add it in.
+                host = Host(ip)
+                self.hosts[ip] = host
+            host.interfaces[mac] = interface
+            host.arpNeighbors[ip] = source
+        return self.hosts
+
 
     def initHost(ip):
         host = Host(ip)
@@ -19,7 +75,7 @@ class Network:
         host.getInterfaces()
         host.hasBridge()
         return host
-    
+    '''
     def getHosts(self):
         #FIXME BROKEN, WILL CORE DUMP. MULTITHREADING:HARD
         # Go through the ARP records in the netDB, and make host objects.
@@ -55,4 +111,4 @@ class Network:
         # weirdness.
         self.hosts = pool.map(functions.initHost, ips)
         return self.hosts
-
+    '''
