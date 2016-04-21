@@ -1,14 +1,9 @@
 # This is the class for operating the network as a whole. It is not strictly
 # subservient to the databases, but manages the network automation as a whole.
 
-from multiprocessing import Pool
-from operator import itemgetter
-import re
-
 from Host import Host
 from Router import Router
 from Interface import Interface
-import functions
 
 class Network:
     def __init__(self, netdb):
