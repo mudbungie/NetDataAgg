@@ -77,11 +77,11 @@ class Router(Host):
                 route = {}
                 # The first four octets should be a destination IP.
                 index = response.oid_index.split('.')
-                route['target'] = Ip('.'.join(index[0:3]))
-                route['netmask'] = Ip('.'.join(index[4:7]).bits())
-                route['destination'] = Ip('.'.join(index[9:12]))
+                route['target'] = Ip('.'.join(index[0:4]))
+                route['netmask'] = Ip('.'.join(index[4:8])).bits()
+                route['destination'] = Ip('.'.join(index[9:13]))
+                print('.'.join(index[4:8]))
                 print('target', route['target'], 'netmask', route['netmask'], 'destination', route['destination'])
-
                 #print(response.oid_index, response.value)
             except AssertionError:
                 print(response.oid_index, response.value)

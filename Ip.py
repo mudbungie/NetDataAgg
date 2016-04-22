@@ -30,10 +30,13 @@ class Ip(str):
     def bits(self):
         # For converting the IP to bits, usually for CIDR notation.
         octets = self.split('.')
-        bits = 0
+        # Start high and count down, so that we can use efficient bitwise ops.
+        bits = 32
         for octet in octets:
+            # Invert it, because netmask is backwards.
+            octet = 255 - int(octet)
             while octet > 0:
-                bits += 1
+                bits -= 1
                 # Bitwise left-shift the octet.
                 octet = octet >> 1
         return bits
