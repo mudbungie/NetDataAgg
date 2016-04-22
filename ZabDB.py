@@ -66,3 +66,6 @@ class ZabDB(Database):
             host['pkgnum'] = self.getPkgnumFromDirtyString(record.host)
             hosts.append(host)
         return hosts
+
+    def getHostByIp(self):
+        pass

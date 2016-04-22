@@ -59,6 +59,22 @@ class Host:
     def arpNeighbors(self, arpNeighbors):
         self.__arpNeighbors = arpNeighbors
 
+    # This info is set mostly through zabbix data, though it can be derived
+    # from a properly configured host.
+    @property
+    def hostname(self):
+        return self.__hostname
+    @hostname.setter
+    def hostname(self, hostname):
+        self.__hostname = hostname
+    @property
+    def hostid(self):
+        return self.__hostname
+    @hostid.setter
+    def hostid(self, hostid):
+        self.__hostid = hostid
+
+
     def getRouter(self):
         routers = (host for host in arpNeighbors.items() if type(host) == Router)
 

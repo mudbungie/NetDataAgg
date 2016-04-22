@@ -41,6 +41,7 @@ class Network:
     def getHosts(self):
         # First, collect all of the ARP data from each of the routers.
         arpTable = []
+        print('Scanning ARP connections on', len(self.routers), 'routers.')
         for router in self.routers.values():
             # Tack together their routing tables.
             arpTable += router.getArpTable()
@@ -62,6 +63,24 @@ class Network:
             host.interfaces[mac] = interface
             host.arpNeighbors[ip] = source
         return self.hosts
+
+    def correlateZabInfo(self, zabdb):
+        #FIXME UNFINISHED
+        #FIXME USE ZABBIX INTERFACE TABLE
+        # Go through the Zabbix database, and attempt to crossreference info 
+        # on each of the hosts, for ease of access.
+        # First, grab the entire hosts table from from Zabbix.
+        zabInterfaces = zabdb.getInterfaces()
+        zabHosts = zabdb.getHosts()
+        # Zabhosts isn't guaranteed to include IP information, but that's the
+        # only way to search it.
+        for host in self.hosts:
+            pass
+            
+
+    def commitHosts(self, netdb):
+        # Log the self.hosts object to the database.
+        pass
 
 
     def initHost(ip):

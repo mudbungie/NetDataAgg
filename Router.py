@@ -28,9 +28,11 @@ class Router(Host):
             return responses
         except easysnmp.exceptions.EasySNMPNoSuchNameError:
             # Probably means that you're hitting the wrong kind of device
+            print('nosuchname')
             return False
         except easysnmp.exceptions.EasySNMPTimeoutError:
             # Either the community string is wrong, or you're pinging dead space
+            print('timeout')
             return False
 
     def getArpTable(self):
@@ -67,4 +69,13 @@ class Router(Host):
         # Walk the routing table
         # I'm just running the direct oid
         mib = '1.3.6.1.2.1.4.24.4.1'
+        print(1)
         responses = self.walk(mib)
+        print(2)
+        routingTable = []
+        for response in responses:
+            try:
+                # Always validate, but just pass on exceptions.
+                print(response.oid_index, response.value)
+            except AssertionError:
+                pass
