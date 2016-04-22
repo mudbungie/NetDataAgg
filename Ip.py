@@ -22,8 +22,18 @@ class Ip(str):
         ipStr = '.'.join([str(b) for b in ipBytes])
         # Make sure that it has four octets, and that we haven't lost anything.
         if len(ipBytes) != 4 or ipStr != address:
-            raise Exception('Improper string submitted for IP address')
+            raise AssertionError('Improper string submitted for IP address')
 
         # Sound like everything's fine!
         return super(Ip, cls).__new__(cls, address)
 
+    def bits(self):
+        # For converting the IP to bits, usually for CIDR notation.
+        octets = self.split('.')
+        bits = 0
+        for octet in octets:
+            while octet > 0:
+                bits += 1
+                # Bitwise left-shift the octet.
+                octet = octet >> 1
+        return bits

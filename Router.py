@@ -69,13 +69,20 @@ class Router(Host):
         # Walk the routing table
         # I'm just running the direct oid
         mib = '1.3.6.1.2.1.4.24.4.1'
-        print(1)
         responses = self.walk(mib)
-        print(2)
         routingTable = []
         for response in responses:
             try:
                 # Always validate, but just pass on exceptions.
-                print(response.oid_index, response.value)
+                route = {}
+                # The first four octets should be a destination IP.
+                index = response.oid_index.split('.')
+                route['target'] = Ip('.'.join(index[0:3]))
+                route['netmask'] = Ip('.'.join(index[4:7]).bits())
+                route['destination'] = Ip('.'.join(index[9:12]))
+                print('target', route['target'], 'netmask', route['netmask'], 'destination', route['destination'])
+
+                #print(response.oid_index, response.value)
             except AssertionError:
-                pass
+                print(response.oid_index, response.value)
+
