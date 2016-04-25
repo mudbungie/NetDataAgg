@@ -62,6 +62,7 @@ class Router(Host):
                     if values['mac'][1] not in localMacs:
                         arpTable.append(values)
                 except AssertionError:
+                    # Malformed input is to be ignored.
                     pass
         return arpTable
 
@@ -71,18 +72,22 @@ class Router(Host):
         mib = '1.3.6.1.2.1.4.24.4.1'
         responses = self.walk(mib)
         routingTable = []
+        # The SNMP routing table is not logical, Have to deduplicate it.
+        seen = set()
         for response in responses:
-            try:
-                # Always validate, but just pass on exceptions.
-                route = {}
-                # The first four octets should be a destination IP.
-                index = response.oid_index.split('.')
-                route['target'] = Ip('.'.join(index[0:4]))
-                route['netmask'] = Ip('.'.join(index[4:8])).bits()
-                route['destination'] = Ip('.'.join(index[9:13]))
-                print('.'.join(index[4:8]))
-                print('target', route['target'], 'netmask', route['netmask'], 'destination', route['destination'])
-                #print(response.oid_index, response.value)
-            except AssertionError:
-                print(response.oid_index, response.value)
-
+            if response.oid_index not in seen:
+                seen.add(response.oid_index)
+                try:
+                    # Always validate, but just pass on exceptions.
+                    route = {}
+                    # The first four octets should be a destination IP.
+                    index = response.oid_index.split('.')
+                    route['target'] = Ip('.'.join(index[0:4]))
+                    route['netmask'] = Ip('.'.join(index[4:8])).bits()
+                    route['destination'] = Ip('.'.join(index[9:13]))
+                    print('target', route['target'], 'netmask', route['netmask'], 
+                        'destination', route['destination'])
+                    #print(response.oid_index, response.value)
+                except AssertionError:
+                    print(response.oid_index, response.value)
+            
