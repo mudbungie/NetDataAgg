@@ -42,6 +42,8 @@ class Router(Host):
         mib = 'ipNetToMediaPhysAddress'
         responses = self.walk(mib)
         arpTable = []
+        self.arpByMac = {}
+        self.arpByIp = {}
         # Conditional, so that we don't error on empty responses
         if responses:
             for response in responses:
@@ -61,17 +63,22 @@ class Router(Host):
                     localMacs = ['2', '6', 'a', 'e']
                     if values['mac'][1] not in localMacs:
                         arpTable.append(values)
+                        self.arpByMac[mac] = ip
+                        self.arpByIp[ip] = mac
                 except AssertionError:
                     # Malformed input is to be ignored.
                     pass
         return arpTable
 
     def getRoutingTable(self):
+        print('Scanning routing table for router at:', self.ip)
         # Walk the routing table
         # I'm just running the direct oid
         mib = '1.3.6.1.2.1.4.24.4.1'
         responses = self.walk(mib)
-        routingTable = []
+        self.routingTable = {}
+        self.singleHostRoutes = {} # Same data, but for just direct connections.
+        self.directRoutes = {}
         # The SNMP routing table is not logical, Have to deduplicate it.
         seen = set()
         for response in responses:
@@ -82,12 +89,30 @@ class Router(Host):
                     route = {}
                     # The first four octets should be a destination IP.
                     index = response.oid_index.split('.')
-                    route['target'] = Ip('.'.join(index[0:4]))
-                    route['netmask'] = Ip('.'.join(index[4:8])).bits()
-                    route['destination'] = Ip('.'.join(index[9:13]))
-                    print('target', route['target'], 'netmask', route['netmask'], 
-                        'destination', route['destination'])
-                    #print(response.oid_index, response.value)
+                    target = Ip('.'.join(index[0:4]))
+                    route['target'] = target
+                    netmask = Ip('.'.join(index[4:8])).bits()
+                    route['netmask'] = netmask
+                    destination = Ip('.'.join(index[9:13]))
+                    route['destination'] = destination
+                    route['router'] = self
+                    #print('target', route['target'], 'netmask', route['netmask'], 
+                    #    'destination', route['destination'])
+                    # Add it into the table
+                    self.routingTable[target] = route
+                    # If it's a single host instead of a network, take note.
+                    if netmask == 32:
+                        self.singleHostRoutes[target] = route
+                        #print('target', route['target'], 'netmask', route['netmask'], 
+                        #    'destination', route['destination'])
+                    try:
+                        print('Direct-attached route:', self.arpByIp[target], 
+                            target, destination)
+                        self.directRoutes[target] = route
+                    except KeyError:
+                        pass
                 except AssertionError:
                     print(response.oid_index, response.value)
-            
+        print('Recorded', len(self.routingTable), 'routes.')
+        print('Recorded', len(self.directRoutes), 'direct-attached routes.')
+        print('Recorded', len(self.singleHostRoutes), '32-bit netmasks.')
