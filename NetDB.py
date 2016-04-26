@@ -29,29 +29,25 @@ class NetDB(Database):
                     'hosts',
                     'bridged_hosts',
                     'bad_usernames',
+                    'routes',
+                    'historicroutes',
                     ]
 
-    def updateArp(self, community):
-        # Scan all the routers in the network, update arp data.
+    def updateArp(self, arps):
+        # Takes a lists of dictionaries in format ip, mac, source, and
+        # commits them to the database.
         table = self.tables['arp']
         histTable = self.tables['historicarp']
-
-        # Also scan the network address, because it's not a real network, but 
-        # an IP range.
-        hosts = self.getRouters()
-        #print('network address')
-        #print(network.network_address)
-        #hosts.append(Router(network.network_address, community))
-
-        for host in hosts:
-            # Make a list of Router objects from the addresses.
-            router = Router(host, community)
-            # Pull the router's ARP table via SNMP
-            # Returns a list of dictionaries
-            arpTable = router.getArpTable()
-            print(router.ip, 'has', len(arpTable), 'arp entries.')
-            self.updateLiveAndHist(table, histTable, arpTable)
+        self.updateLiveAndHist(table, histTable, arps)
         return True
+
+    def updateRoutes(self, routingtables):
+        # Takes list of dicts in format address, netmask, nexthop, router, key,
+        # and commits them to the database.
+        table = self.tables['routes']
+        histTable = self.tables['historicroutes']
+        for routingtable in routingtables:  
+            self.updateLiveAndHist(table, histTable, routingtable)
 
     def updateRadius(self, raddb):
         radData = raddb.fetchRadData()
@@ -65,7 +61,7 @@ class NetDB(Database):
         self.updateTable(self.tables['customers'], customers)
         return True
 
-    def updateHosts(self, zabdb):
+    def updateZabHosts(self, zabdb):
         hosts = zabdb.getHosts()
         self.updateTable(self.tables['zabhosts'], hosts)
         return True

@@ -84,22 +84,34 @@ class Router(Host):
         # I'm just running the direct oid
         mib = '1.3.6.1.2.1.4.24.4.1'
         responses = self.walk(mib)
-        self.routingTable = {}
+        self.routingTable = {} # Internally, we'll want to do lookups.
+        routes = [] # For returning to the Network, unordered lists are fine.
         self.singleHostRoutes = {} # Same data, but for just direct connections.
         self.directRoutes = {}
         # The SNMP routing table is not logical, Have to deduplicate it.
         seen = set()
         errors = 0
+        unrouteable = 0
         for response in responses:
             if response.oid_index not in seen:
                 seen.add(response.oid_index)
-                # Function returns only success or failure; it interacts with 
-                # the routing table directly.
-                if not self.processSNMPRoute(response):
+                # Method false on failure, also adds the route to the Router's
+                # local table.
+                route = self.processSNMPRoute(response)
+                if type(route) == dict:
+                    routes.append(route)
+                elif route == 1:
+                    # Malformed response. Real error.
                     errors += 1
+                elif route == 2:
+                    # Route isn't in ARP table, ignored. 
+                    unrouteable += 1
+                else:
+                    # Should never happen
+                    raise AssertionError('Route parser didn\'t return.')
         print('Recorded', len(self.routingTable), 'routes with',
-            errors, 'errors.')
-        return self.routingTable
+            errors, 'errors, ignoring', unrouteable, 'non-local routes.')
+        return routes
 
     def processSNMPRoute(self, response):
         # Take messy SNMP and make a Route dictionary in the self namespace.
@@ -112,7 +124,7 @@ class Router(Host):
             except KeyError:
                 # There isn't an ARP entry for the route, means it's 
                 # non-actionable, and we won't record it.
-                return False
+                return 2
             # The first four octets should be a destination IP.
             address = Ip('.'.join(index[0:4]))
             # The bits function does bit-math, and returns a CIDR int.
@@ -120,10 +132,13 @@ class Router(Host):
         except AssertionError:
             # Raised by the IP encoding. Indicates a malformed address. 
             print(response.oid_index, response.value)
-            pass
+            return 1
         # Now that everything has passed verification, make it a dictionary.
-        route = {'address':address,'netmask':netmask,'nexthop':nexthop,
-            'router':self}
+        # Note that for database concurrency, we need a single primary key.
+        # This is a sloppy solution, but it serves.
+        routekey = self.ip + '-' + address
+        route = {'key':routekey,'address':address,'netmask':netmask,'nexthop':nexthop,
+            'router':self.ip}
         # Add it to the routing table! This is really the whole point.
         self.routingTable[address] = route
-        return True
+        return route

@@ -54,7 +54,7 @@ class Network:
         # dicts.
         for router in self.routers.values():
             # Router keeps the data in its local object, but we also aggregate.
-            self.globalRoutingTable[router.ip] = router.getRoutingTable()
+            self.globalRoutingTable.append(router.getRoutingTable())
         return self.globalRoutingTable
 
     def getHosts(self):

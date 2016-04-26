@@ -2,6 +2,7 @@
 
 # This is the daemon that runs checks and updates data. 
 # It forks operations on a timer.
+#FIXME No it doesn't, but it should.
 
 from os import fork
 from datetime import datetime
@@ -16,11 +17,12 @@ from Network import Network
 
 initdbs = True
 initnet = True
-scanrouters = False
-updatedbs = False
-checkarp = False
-checkusernames = False
-scannetwork = True
+scanarp = True
+scanroutes = True
+pullforeigndbs = True
+verifyarp = True
+verifyusernames = True
+scannetwork = False
 
 if __name__ == '__main__':
     if initdbs:
@@ -29,31 +31,36 @@ if __name__ == '__main__':
         zabdb = ZabDB(config['databases']['zabbix'])
         fsdb  = FreesideDB(config['databases']['freeside'])
 
-    if initsnmp:
-        routercommunity = config['snmp']['routercommunity']
-        radiocommunity = config['snmp']['radiocommunity']
 
     if initnet:
         yknet = Network()
+        yknet.routerCommunity = config['snmp']['routercommunity']
+        yknet.radioCommunity = config['snmp']['radiocommunity']
         yknet.routers = netdb.getRouters()
         
     if scanarp:
         print('Updating Arp...')
-        network.scanRouterArpTables()
+        yknet.scanRouterArpTables()
+        netdb.updateArp(yknet.globalArpTable)
 
-    if scanrouters:
+    if scanroutes:
+        print('Updating Routing Table...')
+        yknet.scanRouterRoutingTables()
+        netdb.updateRoutes(yknet.globalRoutingTable)
+
+    if pullforeigndbs:
         print('Updating Radius...')
         netdb.updateRadius(raddb)
-        print('Updating Hosts...')
-        netdb.updateHosts(zabdb)
+        print('Updating Zabbix Hosts...')
+        netdb.updateZabHosts(zabdb)
         print('Updating Customers...')
         netdb.updateCustomers(fsdb)
     
-    if checkarp:
+    if verifyarp:
         print('Diagnosing Zabbix/Arp mismatches...')
         netdb.checkZabbixAgainstArp()
     
-    if checkusernames:
+    if verifyusernames:
         print('Diagnosing Radius/Hostname mismatches...')
         netdb.updateBadUsernames()
     

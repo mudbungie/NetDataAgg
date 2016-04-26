@@ -2,6 +2,7 @@
 
 from Database import Database
 from Ip import Ip
+from functions import sanitizeString
 
 class FreesideDB(Database):
     connectionProtocol = 'postgresql+psycopg2://'
@@ -14,9 +15,9 @@ class FreesideDB(Database):
         for record in records:
             cust = {}
             cust['custnum'] = record.custnum
-            cust['name'] = ' '.join([record.first, record.last])
-            cust['company'] = record.company
-            cust['payname'] = record.payname
+            cust['name'] = sanitizeString(' '.join([record.first, record.last]))
+            cust['company'] = sanitizeString(record.company)
+            cust['payname'] = sanitizeString(record.payname)
             custs.append(cust)
         return custs
 

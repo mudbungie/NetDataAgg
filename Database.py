@@ -45,12 +45,12 @@ class Database:
             self.tables[tableName] = self.initTable(tableName)
 
     def execute(self, query):
-        # Just shorthand
+        # Just shorthand.
         # Well, and it allows descendants to shadow for specific error handling
         return self.connection.execute(query)
 
     def insert(self, table, values):
-        # Defined just to allow shadowing by child classes
+        # Defined just to allow shadowing by child classes.
         q = table.insert(values)
         return self.execute(q)
 
@@ -101,7 +101,12 @@ class Database:
                     upd = table.update().\
                         where(getattr(table.c, pkey) == newdatum[pkey]).\
                         values(newdatum)
-                    self.execute(upd)
+                    try:
+                        self.execute(upd)
+                    except UnicodeEncodeError:
+                        print('Error on record', newdatum[pkey])
+                        print(newdatum)
+                        raise
                     updated += 1
                 else:
                     unchanged += 1
@@ -168,7 +173,11 @@ class Database:
         for datum in data:
             try:
                 # Get the active record that has the same pkey.
-                relevantCurrentData = currentData[datum[pkey]]
+                try:
+                    relevantCurrentData = currentData[datum[pkey]]
+                except TypeError:
+                    print(datum)
+                    raise
                 # If the data matches, nothing to be done. Otherwise...
                 if not datum == relevantCurrentData:
                     updates += 1
@@ -192,13 +201,13 @@ class Database:
                     currentUpdate = currentTable.update().\
                         where(getattr(currentTable.c, pkey) == datum[pkey]).\
                         values(datum)
-                    #print(currentUpdate)
                     self.execute(currentUpdate)
                     # Finally, append the new record to the current records dict.
                     # so that we don't conflict with other records from the 
                     # same batch.
                     currentData[datum[pkey]] = datum
-                    #print('Updated data for:', currentData[datum[pkey]])
+                    print('update:', datum)
+                    print('oldate:', relevantCurrentData)
                 else:
                     unchanged += 1
                     pass
