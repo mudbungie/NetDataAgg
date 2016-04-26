@@ -11,7 +11,6 @@ import re
 from Ip import Ip
 from Mac import Mac
 from Host import Host
-from Route import Route
 
 class Router(Host):
     def __init__(self, ip, community):
@@ -100,6 +99,7 @@ class Router(Host):
                     errors += 1
         print('Recorded', len(self.routingTable), 'routes with',
             errors, 'errors.')
+        return self.routingTable
 
     def processSNMPRoute(self, response):
         # Take messy SNMP and make a Route dictionary in the self namespace.

@@ -6,11 +6,13 @@ from Router import Router
 from Interface import Interface
 
 class Network:
-    def __init__(self, netdb):
+    def __init__(self):
         # It's just going to be clearer in terms of namespacing if the DB is 
         # attached.
-        self.netdb = netdb
         self.hosts = {}
+        self.routers = {}
+        self.globalArpTable = []
+        self.globalRoutingTable = []
 
     # Hosts are a dict by IP
     @property
@@ -38,20 +40,26 @@ class Network:
             # Any router is also a host.
             self.hosts[ip] = router
 
-    def scanArpTables(self):
-        for router in self.routers:
-            router.getArpTable()
-
-    def getHosts(self):
-        # First, collect all of the ARP data from each of the routers.
-        arpTable = []
+    def scanRouterArpTables(self):
+        # Collects arp information on each router.
         print('Scanning ARP connections on', len(self.routers), 'routers.')
         for router in self.routers.values():
-            # Tack together their routing tables.
-            arpTable += router.getArpTable()
+            # The router will keep the arp information locally, but it is also
+            # returned, making this both an update and a query function.
+            self.globalArpTable += router.getArpTable()
+        return self.globalArpTable
 
+    def scanRouterRoutingTables(self):
+        # Routing data, unlike ARP, will step on itself, so it's a dict of 
+        # dicts.
+        for router in self.routers.values():
+            # Router keeps the data in its local object, but we also aggregate.
+            self.globalRoutingTable[router.ip] = router.getRoutingTable()
+        return self.globalRoutingTable
+
+    def getHosts(self):
         # We're going to iterate over all the arps, and turn them into hosts.
-        for arp in arpTable:
+        for arp in self.globalArpTable:
             ip = arp['ip']
             mac = arp['mac']
             source = self.routers[arp['source']]

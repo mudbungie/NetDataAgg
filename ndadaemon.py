@@ -15,6 +15,7 @@ from ipaddress import IPv4Network
 from Network import Network
 
 initdbs = True
+initnet = True
 scanrouters = False
 updatedbs = False
 checkarp = False
@@ -27,11 +28,18 @@ if __name__ == '__main__':
         raddb = RadDB(config['databases']['radius'])
         zabdb = ZabDB(config['databases']['zabbix'])
         fsdb  = FreesideDB(config['databases']['freeside'])
+
+    if initsnmp:
+        routercommunity = config['snmp']['routercommunity']
+        radiocommunity = config['snmp']['radiocommunity']
+
+    if initnet:
+        yknet = Network()
+        yknet.routers = netdb.getRouters()
         
-    if scanrouters:
+    if scanarp:
         print('Updating Arp...')
-        community = config['snmp']['routercommunity']
-        netdb.updateArp(community)
+        network.scanRouterArpTables()
 
     if scanrouters:
         print('Updating Radius...')
