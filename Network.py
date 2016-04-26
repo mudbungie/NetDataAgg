@@ -38,6 +38,10 @@ class Network:
             # Any router is also a host.
             self.hosts[ip] = router
 
+    def scanArpTables(self):
+        for router in self.routers:
+            router.getArpTable()
+
     def getHosts(self):
         # First, collect all of the ARP data from each of the routers.
         arpTable = []
@@ -60,6 +64,7 @@ class Network:
                 # If it doesn't, then add it in.
                 host = Host(ip)
                 self.hosts[ip] = host
+            # Then, new or not, add the interface information.
             host.interfaces[mac] = interface
             host.arpNeighbors[ip] = source
         return self.hosts
