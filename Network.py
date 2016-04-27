@@ -110,3 +110,4 @@ class Network:
             self.routes.update(router.getRoutingTable())
         print(len(routes))
         return self.routes
+

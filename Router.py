@@ -177,4 +177,4 @@ class Router(Host):
 
     def commitRoutingTable(self, netdb):
         # Write the router's routing table into the database.
-        pass
+        netdb.updateRoutes(self.routingTable)

@@ -79,6 +79,19 @@ class Database:
             data[datum[pkey]] = datum
         return data
 
+    def pullTableAsDict(self, table):
+        # Single function to pull an entire table, and turn it into a dict
+        # indexed by its pkey.
+        records = self.execute(table.select())
+        pkey = self.getpkey(table)
+        data = {}
+        for record in records:
+            datum = {}
+            for column in columns:
+                datum[column] = getattr(record, column)
+            data[datum[pkey]] = datum
+        return data
+
     def updateTable(self, table, newdata, pkey=None):
         # Takes the data from a table, compares it to a list of dicts by the
         # table's primary key, inserts new entries, updates changed entries.

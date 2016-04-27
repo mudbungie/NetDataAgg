@@ -254,3 +254,19 @@ class NetDB(Database):
         records = self.execute(table.select())
         badUsernames = self.recordsToListOfDicts(records)
         return badUsernames
+
+    def updateRoutes(routingTable):
+        # Takes a dictionary from a Router, commits it to the Routes table,
+        # and has a mapped dependent table for the destination, because that
+        # relationship is one-to-many.
+        routeTable = self.tables('routes')
+        nextHopTable = self.tables('nexthops')
+        
+        # We'll start by just pulling both tables so that they're easier to 
+        # work with.
+        oldRoutes = self.pullTableAsDict(routeTable)
+        oldHops = self.pullTableAsDict(nextHopTable)
+        
+        # It's a dictionary, because the router will do lookups, but we don't
+        # care about that for this. 
+        for route in routingTable.
