@@ -52,6 +52,18 @@ class Database:
     def insert(self, table, values):
         # Defined just to allow shadowing by child classes.
         q = table.insert(values)
+        return self.execute(q).inserted_primary_key
+
+    def update(self, table, values):
+        # For single-row updates.
+        pkey = self.getPkey(table)
+        q = table.update().where(getattr(table.c, pkey) == values[pkey]).\
+            values(values)
+        return self.execute(q)
+
+    def delete(self, table, pkey):
+        # Single-row delete based on pkey.
+        q = table.delete().where(getattr(table.c, pkey) == pkey)
         return self.execute(q)
 
     def getPkey(self, table):
@@ -79,11 +91,12 @@ class Database:
             data[datum[pkey]] = datum
         return data
 
-    def pullTableAsDict(self, table):
+    def pullTableAsDict(self, table, pkey=None):
         # Single function to pull an entire table, and turn it into a dict
         # indexed by its pkey.
         records = self.execute(table.select())
-        pkey = self.getpkey(table)
+        if not pkey:
+            pkey = self.getPkey(table)
         data = {}
         for record in records:
             datum = {}

@@ -111,3 +111,6 @@ class Network:
         print(len(routes))
         return self.routes
 
+    def commitRoutes(self, netdb):
+        for router in self.routers.values():
+            netdb.updateRoutes(router)

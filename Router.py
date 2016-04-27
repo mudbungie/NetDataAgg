@@ -118,7 +118,7 @@ class Router(Host):
                     raise AssertionError('Route parser didn\'t return.')
         print('Recorded', len(self.routingTable), 'routes, of which', 
             multipleroutes, 'are multiply routed, ignoring',
-            errors, 'errors, ignoring', unrouteable, 'non-local routes,',
+            errors, 'errors, ', unrouteable, 'non-local routes,',
             redundantresponses, 'redundant responses.')
         return self.routingTable
 
@@ -174,7 +174,3 @@ class Router(Host):
         # Add it to the routing table! This is really the whole point.
         self.routingTable[address] = route
         return 0
-
-    def commitRoutingTable(self, netdb):
-        # Write the router's routing table into the database.
-        netdb.updateRoutes(self.routingTable)

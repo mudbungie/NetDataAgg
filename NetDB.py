@@ -31,6 +31,7 @@ class NetDB(Database):
                     'bad_usernames',
                     'routes',
                     'historicroutes',
+                    'nexthops',
                     ]
 
     def updateArp(self, arps):
@@ -255,18 +256,108 @@ class NetDB(Database):
         badUsernames = self.recordsToListOfDicts(records)
         return badUsernames
 
-    def updateRoutes(routingTable):
+    def updateRoutes(self, router):
         # Takes a dictionary from a Router, commits it to the Routes table,
         # and has a mapped dependent table for the destination, because that
         # relationship is one-to-many.
-        routeTable = self.tables('routes')
-        nextHopTable = self.tables('nexthops')
+        routesTable = self.tables['routes']
+        nextHopTable = self.tables['nexthops']
+        routeraddr = router.ip
+        routingdata = router.routingTable
         
         # We'll start by just pulling both tables so that they're easier to 
         # work with.
-        oldRoutes = self.pullTableAsDict(routeTable)
-        oldHops = self.pullTableAsDict(nextHopTable)
-        
-        # It's a dictionary, because the router will do lookups, but we don't
-        # care about that for this. 
-        for route in routingTable.
+        oldHops = self.pullTableAsDict(nextHopTable, pkey='routeid')
+        # The routes table has a info on other routers, which we don't want.
+        oldRoutesQuery = routesTable.select().\
+            where(routesTable.c.router == routeraddr)
+        oldRouteRecords = self.execute(oldRoutesQuery)
+        # The table is indexed by a serial, but lookups here will be done by
+        # address, so some parsing is in order.
+        oldRoutes = {}
+        for record in oldRouteRecords:
+            oldRoutes[record.address] = {'routeid':record.routeid,
+                'address':record.address,
+                'netmask':record.netmask}
+        # Then, the hops are essentially a list pertaining to the route, so we
+        # want to turn that into a logical data structure, ie, dict containing
+        # list.
+        for hop in oldHops:
+            # Try to add the list to the route's hops, and failing that, add
+            # the field in.
+            try:
+                route = oldRoutes[hop.routeid]
+                try:
+                    route['nexthops'].append(hop.nexthop)
+                except KeyError:
+                    route['nexthops'] = [hop.nexthop]
+            except KeyError:
+                # The hop isn't from this router, ignore it.
+                pass
+                
+        # Now that the old routes are normalized, we'll check for updates and
+        # new records. 
+        newRoutes = 0
+        stableRoutes = 0
+        purgedRoutes = 0
+        updatedRoutes = 0
+        newHops = 0
+        stableHops = 0
+        purgedHops = 0 
+        # Hops don't get updated.
+
+        for route in routingdata.values():
+            try:
+                # This line fails if the route is new, and we insert.
+                oldRoute = oldRoutes[route['address']]
+                index = oldRoute['routeid']
+                if route['netmask'] != oldRoute['netmask']:
+                    # For updates, we need to match id.
+                    route['routeid'] = index
+                    self.update(routesTable, route)
+                    updatedRoutes += 1
+                else:
+                    stableRoutes += 1
+            except KeyError:
+                index = self.insertRoute(route)
+                newRoutes += 1
+                
+            currenthops = route['nexthops']
+            oldhops = oldRoute['nexthops']
+
+            # Add in new routes...
+            for hop in currenthops:
+                if hop not in oldhops:
+                    self.insert(nextHopTable, {'routeid':index,'nexthop':hop})
+                    newHops += 1
+                else:
+                    stableHops += 1
+            # and purge the old.
+            for hop in oldhops:
+                if hop not in currenthops:
+                    q = nextHopTable.delete().\
+                        where(sqla.and_(nextHopTable.c.routeid == index,
+                        nextHopTable.c.nexthop == hop))
+                    self.execute(q)
+                    purgedHops += 1
+        # Don't forget to purge old routes!
+        for route in oldRoutes.values():
+            try:
+                routingData[route['address']]
+            except KeyError:
+                self.delete(routesTable, route['routeid'])
+                q = nextHopTable.delete().\
+                    where(nextHopTable.c.routeid == route['routeid'])
+                self.execute(q)
+
+    def insertRoute(self, route):
+        routesTable = self.tables['routes']
+        nextHopTable = self.tables['nexthops']
+        # We need to take the hops out, and handle them separately. We insert
+        # the route, then takes its primary key as an id to index the routes.
+        hops = route['nexthops']
+        del route['nexthops']
+        index = self.insert(routesTable, route)
+        for hop in hops:
+            self.insert(nextHopTable, {'routeid':index,'nexthop':hop})
+

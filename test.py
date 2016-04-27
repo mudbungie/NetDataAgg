@@ -7,7 +7,9 @@ from NetDB import NetDB
 netDB = NetDB(config['databases']['netdata'])
 yknet = Network() # Not passing a DB, this is just testing.
 yknet.routerCommunity = 'fartknocker'
-yknet.routers = netDB.getRouters()
+#yknet.routers = netDB.getRouters()
+yknet.routers = ['199.68.200.241']
 yknet.scanRouterArpTables()
 yknet.getHosts()
 yknet.scanRouterRoutingTables()
+yknet.commitRoutes(netDB)
