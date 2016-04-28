@@ -61,9 +61,11 @@ class Database:
             values(values)
         return self.execute(q)
 
-    def delete(self, table, pkey):
+    def delete(self, table, value, pkey=None):
         # Single-row delete based on pkey.
-        q = table.delete().where(getattr(table.c, pkey) == pkey)
+        if not pkey:
+            pkey = self.getPkey(table)
+        q = table.delete().where(getattr(table.c, pkey) == value)
         return self.execute(q)
 
     def getPkey(self, table):
@@ -95,6 +97,7 @@ class Database:
         # Single function to pull an entire table, and turn it into a dict
         # indexed by its pkey.
         records = self.execute(table.select())
+        columns = records.keys()
         if not pkey:
             pkey = self.getPkey(table)
         data = {}

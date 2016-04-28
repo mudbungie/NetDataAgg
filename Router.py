@@ -120,6 +120,8 @@ class Router(Host):
             multipleroutes, 'are multiply routed, ignoring',
             errors, 'errors, ', unrouteable, 'non-local routes,',
             redundantresponses, 'redundant responses.')
+        counter = 0
+        fails = 0
         return self.routingTable
 
     def processSNMPRoute(self, response):

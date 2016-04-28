@@ -267,7 +267,6 @@ class NetDB(Database):
         
         # We'll start by just pulling both tables so that they're easier to 
         # work with.
-        oldHops = self.pullTableAsDict(nextHopTable, pkey='routeid')
         # The routes table has a info on other routers, which we don't want.
         oldRoutesQuery = routesTable.select().\
             where(routesTable.c.router == routeraddr)
@@ -276,21 +275,30 @@ class NetDB(Database):
         # address, so some parsing is in order.
         oldRoutes = {}
         for record in oldRouteRecords:
-            oldRoutes[record.address] = {'routeid':record.routeid,
+            routeid = record.routeid
+            # Get related records on hops, which is one-to-many
+            nexthopRecords = nextHopTable.select().\
+                where(nextHopTable.c.routeid == routeid)
+            nextHops = []
+            for nexthopRecord in nextHopRecords:
+                nextHops.append(nextHopRecord.nexthop)
+            oldRoutes[record.address] = {'routeid':routeid,
                 'address':record.address,
-                'netmask':record.netmask}
+                'netmask':record.netmask,
+                'nexthops':nexthops}
         # Then, the hops are essentially a list pertaining to the route, so we
         # want to turn that into a logical data structure, ie, dict containing
         # list.
-        for hop in oldHops:
+        for hop in table.select().nexthops():
             # Try to add the list to the route's hops, and failing that, add
             # the field in.
             try:
-                route = oldRoutes[hop.routeid]
+                route = oldRoutes[hop[0]]
                 try:
                     route['nexthops'].append(hop.nexthop)
                 except KeyError:
                     route['nexthops'] = [hop.nexthop]
+                print(route)
             except KeyError:
                 # The hop isn't from this router, ignore it.
                 pass
@@ -305,7 +313,6 @@ class NetDB(Database):
         stableHops = 0
         purgedHops = 0 
         # Hops don't get updated.
-
         for route in routingdata.values():
             try:
                 # This line fails if the route is new, and we insert.
@@ -313,42 +320,63 @@ class NetDB(Database):
                 index = oldRoute['routeid']
                 if route['netmask'] != oldRoute['netmask']:
                     # For updates, we need to match id.
-                    route['routeid'] = index
+                    iroute = route.copy()
+                    iroute['routeid'] = index
+                    del iroute['nexthops']
                     self.update(routesTable, route)
                     updatedRoutes += 1
                 else:
                     stableRoutes += 1
+                
+                currenthops = route['nexthops']
+                try:
+                    oldhops = oldRoute['nexthops']
+                except KeyError:
+                    # Means that an old route has no hops, which means it is
+                    # defunct. Should be purged.
+                    self.delete(routesTable, oldRoute['routeid'])
+                    purgedRoutes += 1
+                    oldhops = []
+
+                # Add in new hops...
+                for hop in currenthops:
+                    if hop not in oldhops:
+                        self.insert(nextHopTable, {'routeid':index,'nexthop':hop})
+                        newHops += 1
+                    else:
+                        stableHops += 1
+                # and purge the old.
+                for hop in oldhops:
+                    if hop not in currenthops:
+                        q = nextHopTable.delete().\
+                            where(sqla.and_(nextHopTable.c.routeid == index,
+                            nextHopTable.c.nexthop == hop))
+                        self.execute(q)
+                        purgedHops += 1
+
             except KeyError:
                 index = self.insertRoute(route)
                 newRoutes += 1
-                
-            currenthops = route['nexthops']
-            oldhops = oldRoute['nexthops']
+                newHops += len(route['nexthops'])
 
-            # Add in new routes...
-            for hop in currenthops:
-                if hop not in oldhops:
-                    self.insert(nextHopTable, {'routeid':index,'nexthop':hop})
-                    newHops += 1
-                else:
-                    stableHops += 1
-            # and purge the old.
-            for hop in oldhops:
-                if hop not in currenthops:
-                    q = nextHopTable.delete().\
-                        where(sqla.and_(nextHopTable.c.routeid == index,
-                        nextHopTable.c.nexthop == hop))
-                    self.execute(q)
-                    purgedHops += 1
         # Don't forget to purge old routes!
         for route in oldRoutes.values():
             try:
-                routingData[route['address']]
+                # If the old record isn't in the new records.
+                routingdata[route['address']]
             except KeyError:
                 self.delete(routesTable, route['routeid'])
+                # And orphaned hops!
                 q = nextHopTable.delete().\
                     where(nextHopTable.c.routeid == route['routeid'])
                 self.execute(q)
+
+        print('Recorded', newRoutes, 'new routes, updated', updatedRoutes,
+            'old routes, and purged', purgedRoutes, 'defunct routes.')
+        print(stableRoutes, 'consistent routes were unaffected.')
+        print('Recorded', newHops, 'new nexthops, purged', purgedHops,
+            'defunct nexthops.')
+        print(stableHops, 'consistent hops were unaffected.')
 
     def insertRoute(self, route):
         routesTable = self.tables['routes']
@@ -356,8 +384,11 @@ class NetDB(Database):
         # We need to take the hops out, and handle them separately. We insert
         # the route, then takes its primary key as an id to index the routes.
         hops = route['nexthops']
-        del route['nexthops']
-        index = self.insert(routesTable, route)
+        iroute = route.copy()
+        del iroute['nexthops']
+        index = self.insert(routesTable, iroute)[0]
+        inserts = 0
         for hop in hops:
             self.insert(nextHopTable, {'routeid':index,'nexthop':hop})
-
+            inserts += 1
+        return inserts
