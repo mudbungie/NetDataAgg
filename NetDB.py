@@ -270,39 +270,11 @@ class NetDB(Database):
         # The routes table has a info on other routers, which we don't want.
         oldRoutesQuery = routesTable.select().\
             where(routesTable.c.router == routeraddr)
-        oldRouteRecords = self.execute(oldRoutesQuery)
-        # The table is indexed by a serial, but lookups here will be done by
-        # address, so some parsing is in order.
-        oldRoutes = {}
-        for record in oldRouteRecords:
-            routeid = record.routeid
-            # Get related records on hops, which is one-to-many
-            nexthopRecords = nextHopTable.select().\
-                where(nextHopTable.c.routeid == routeid)
-            nextHops = []
-            for nexthopRecord in nextHopRecords:
-                nextHops.append(nextHopRecord.nexthop)
-            oldRoutes[record.address] = {'routeid':routeid,
-                'address':record.address,
-                'netmask':record.netmask,
-                'nexthops':nexthops}
-        # Then, the hops are essentially a list pertaining to the route, so we
-        # want to turn that into a logical data structure, ie, dict containing
-        # list.
-        for hop in table.select().nexthops():
-            # Try to add the list to the route's hops, and failing that, add
-            # the field in.
-            try:
-                route = oldRoutes[hop[0]]
-                try:
-                    route['nexthops'].append(hop.nexthop)
-                except KeyError:
-                    route['nexthops'] = [hop.nexthop]
-                print(route)
-            except KeyError:
-                # The hop isn't from this router, ignore it.
-                pass
-                
+        r = self.recordsToDictOfDicts(self.execute(oldRoutesQuery), 'address')
+        oldRoutes = self.GetDependentRecords(r, nextHopTable, 
+            'routeid')
+        raise AssertionError
+
         # Now that the old routes are normalized, we'll check for updates and
         # new records. 
         newRoutes = 0
@@ -366,10 +338,12 @@ class NetDB(Database):
                 routingdata[route['address']]
             except KeyError:
                 self.delete(routesTable, route['routeid'])
+                purgedRoutes += 1
                 # And orphaned hops!
                 q = nextHopTable.delete().\
                     where(nextHopTable.c.routeid == route['routeid'])
                 self.execute(q)
+                
 
         print('Recorded', newRoutes, 'new routes, updated', updatedRoutes,
             'old routes, and purged', purgedRoutes, 'defunct routes.')

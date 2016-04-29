@@ -52,7 +52,7 @@ class Database:
     def insert(self, table, values):
         # Defined just to allow shadowing by child classes.
         q = table.insert(values)
-        return self.execute(q).inserted_primary_key
+        return self.execute(q)
 
     def update(self, table, values):
         # For single-row updates.
@@ -226,7 +226,7 @@ class Database:
                     histDatum['observed'] = now
                     histInsert = histTable.insert().values(histDatum)
                     self.execute(histInsert)
-                    # The, update the current data.
+                    # Then, update the current data.
                     currentUpdate = currentTable.update().\
                         where(getattr(currentTable.c, pkey) == datum[pkey]).\
                         values(datum)
@@ -255,3 +255,82 @@ class Database:
         print(new, 'new records.')
         print(updates, 'updated records.')
         print(unchanged, 'unchanged records.')
+
+    def GetDependentRecords(self, records, deptable, key):
+        # Get records from a dependent table, and add them into the provided
+        # records as a list. Records should be a dict.
+        for record in records.values():
+            index = record[key]
+            depq = deptable.select().where(getattr(deptable.c, key) == index)
+            deprecords = self.recordsToListOfDicts(self.execute(depq))
+            record[deptable.name] = deprecords
+        return records
+
+    def updateTableAndDep(self, news, olds, table, deptable):
+        # Updates a table and a dependent table based on the comparison of
+        # two dictionaries. Only supports a single iterable element.
+
+        for new in news.items():
+            # Look up old by corresponding key.
+            unchanged = 0
+            updated = 0
+            newfound = 0
+            purged = 0
+            try:
+                old = olds[new[0]]
+                if new == old:
+                    # It's the same, no modification.
+                    del olds[new[0]]
+                    unchanged += 1
+                else:
+                    updated += 1
+                    self.updateWithDep(new, old, table, deptable)
+                    del old[new[0]]
+            except ValueError:
+                # It's new, insert it.
+                self.insertWithDep(new, table, deptable)
+                newfound += 1
+        return ['unchanged':unchanged, 'updated':updated, 'newfound':newfound,
+            'purged':purged]
+
+    def insertWithDep(datum, table, depTable):
+        # Takes a dictionary which contains exactly one list of dictionaries.
+        # Fuck relational databases.
+        for key, value in datum:
+            if type(value) == list:
+                # Purge it from the primary record, for inserting.
+                del datum[key]
+                index = self.insert(datum, table).inserted_primary_key
+                for item in value:
+                    # Then insert it to its own table.
+                    item[self.getPkey(table)] = index
+                    self.insert(item, depTable)
+                return self.insert(datum, table)
+        
+    def updateWithDep(datum, olddatum, table, depTable):
+        # Takes two dictionaries which contains exactly one list of 
+        # dictionaries each.
+        if datum == oldDatum:
+            # No need to update the records, go home.
+            return False
+        for key, value in datum:
+            if type(value) == list:
+                # Purge from the primary record.
+                del datum[key]
+                # Assign the same primary key to the new record.
+                pkey = self.getPkey(table)
+                datum[pkey] = olddatum[pkey]
+                self.update(datum, table)
+                # Then, we need to insert and purge mismatching dependents.
+                # We're going to cross-compare and insert anything that isn't 
+                # in the old data, then delete anything that isn't in the new
+                # data.
+                for depkey, depvalue in value:
+                    if depvalue in oldDatum[key].values():
+                        del oldDatum[key][depkey]
+                    else:
+                        self.insert(depvalue, depTable)
+                for oldkey, oldvalue in oldDatum[key]:
+                    if oldvalue not in value.values():
+                        q = depTable.delete().where(oldvalue)
+                        self.execute(q)
