@@ -28,6 +28,9 @@ def arpLookup(query, netdb):
         except Exceptions.InputError:
             return 'Please enter either a MAC or IP address..'
     customers = netdb.custLookup(query)
+    for customer in customers:
+        # Make the IPs hyperlinks 'cause why not.
+        customer['ip'] = hyperLinkString(customer['ip'])
     return pageWrap(listToTable(['hostname', 'ip', 'mac'], customers))
 
 def listToTable(columns, data):
@@ -55,3 +58,6 @@ def listToTable(columns, data):
         html += '</tr>\n'
     html += '</table>'
     return html
+
+def hyperLinkString(string):
+    return '<a href="http://'+string+'">'+string+'</a>'
