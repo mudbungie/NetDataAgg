@@ -46,5 +46,5 @@ def getBadUsernames():
 def hostLookupPage():
     pass
 
-ndabottle.run(host='127.0.0.1', port=6101)
+ndabottle.run(host='127.0.0.1', port=6001)
 
