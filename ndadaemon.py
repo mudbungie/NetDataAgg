@@ -18,7 +18,7 @@ from Network import Network
 initdbs = True
 initnet = True
 scanarp = True
-scanroutes = True
+scanroutes = False
 pullforeigndbs = True
 verifyarp = True
 verifyusernames = True

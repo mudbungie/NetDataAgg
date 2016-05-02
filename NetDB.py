@@ -41,7 +41,7 @@ class NetDB(Database):
         histTable = self.tables['historicarp']
         self.updateLiveAndHist(table, histTable, arps)
         return True
-
+    '''
     def updateRoutes(self, routingtables):
         # Takes list of dicts in format address, netmask, nexthop, router, key,
         # and commits them to the database.
@@ -49,7 +49,7 @@ class NetDB(Database):
         histTable = self.tables['historicroutes']
         for routingtable in routingtables:  
             self.updateLiveAndHist(table, histTable, routingtable)
-
+    '''
     def updateRadius(self, raddb):
         radData = raddb.fetchRadData()
         table = self.tables['radius']
@@ -271,9 +271,8 @@ class NetDB(Database):
         oldRoutesQuery = routesTable.select().\
             where(routesTable.c.router == routeraddr)
         r = self.recordsToDictOfDicts(self.execute(oldRoutesQuery), 'address')
-        oldRoutes = self.GetDependentRecords(r, nextHopTable, 
-            'routeid')
-        raise AssertionError
+        oldRoutes = self.GetDependentRecords(r, nextHopTable, 'routeid')
+        print('Retrieved', len(oldRoutes), 'old routes.')
 
         # Now that the old routes are normalized, we'll check for updates and
         # new records. 
@@ -284,6 +283,8 @@ class NetDB(Database):
         newHops = 0
         stableHops = 0
         purgedHops = 0 
+        self.updateTableAndDep(routingdata, oldRoutes, routesTable, nextHopTable)
+        '''
         # Hops don't get updated.
         for route in routingdata.values():
             try:
@@ -320,10 +321,7 @@ class NetDB(Database):
                 # and purge the old.
                 for hop in oldhops:
                     if hop not in currenthops:
-                        q = nextHopTable.delete().\
-                            where(sqla.and_(nextHopTable.c.routeid == index,
-                            nextHopTable.c.nexthop == hop))
-                        self.execute(q)
+                        self.deleteHop(hop['routeid'], hop['nexthop'])
                         purgedHops += 1
 
             except KeyError:
@@ -351,6 +349,7 @@ class NetDB(Database):
         print('Recorded', newHops, 'new nexthops, purged', purgedHops,
             'defunct nexthops.')
         print(stableHops, 'consistent hops were unaffected.')
+        '''
 
     def insertRoute(self, route):
         routesTable = self.tables['routes']
@@ -360,9 +359,15 @@ class NetDB(Database):
         hops = route['nexthops']
         iroute = route.copy()
         del iroute['nexthops']
-        index = self.insert(routesTable, iroute)[0]
+        index = self.insert(routesTable, iroute).inserted_primary_key[0]
         inserts = 0
         for hop in hops:
             self.insert(nextHopTable, {'routeid':index,'nexthop':hop})
             inserts += 1
         return inserts
+
+    def deleteHop(self, routeid, nexthop):
+        #FIXME Generalize this and put it into Database.py.
+        t = self.tables['nexthops']
+        q = t.delete().where(sqla.and_(t.c.routeid == routeid, t.c.nexthop == nexthop))
+        self.execute(q)

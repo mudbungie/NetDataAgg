@@ -99,7 +99,7 @@ class Host:
                             label = ifname.value
                     interface.label = label
                     #print(interface, interface.label)
-                    self.interfaces.append(interface)
+                    self.interfaces[mac] = interface
             return self.interfaces
         else:
             self.online = False
@@ -152,7 +152,7 @@ class Host:
     def hasMac(self, mac):
         # Simple. Just find out if this host has a given hwaddr.
         matchingInterfaces = []
-        for interface in self.interfaces:
+        for interface in self.interfaces.values():
             if interface.mac == mac:
                 matchingInterfaces.append(interface.label)
         if len(matchingInterfaces) > 0:

@@ -11,5 +11,5 @@ yknet.routerCommunity = 'fartknocker'
 yknet.routers = ['199.68.200.241']
 yknet.scanRouterArpTables()
 yknet.getHosts()
-yknet.scanRouterRoutingTables()
-yknet.commitRoutes(netDB)
+#yknet.scanRouterRoutingTables()
+#yknet.commitRoutes(netDB)

@@ -284,53 +284,63 @@ class Database:
                     unchanged += 1
                 else:
                     updated += 1
-                    self.updateWithDep(new, old, table, deptable)
+                    self.updateWithDep(new[1], old, table, deptable)
                     del old[new[0]]
-            except ValueError:
+            except KeyError:
                 # It's new, insert it.
-                self.insertWithDep(new, table, deptable)
+                self.insertWithDep(new[1], table, deptable)
                 newfound += 1
-        return ['unchanged':unchanged, 'updated':updated, 'newfound':newfound,
-            'purged':purged]
+        # Now, anything left in olds needs to get purged.
+        for old in olds.items():
+            self.delete(table, old[1]['routeid'])
+            unchanged += 1
 
-    def insertWithDep(datum, table, depTable):
+        report =  {'unchanged':unchanged, 'updated':updated, 'newfound':newfound,
+            'purged':purged}
+        print(report)
+        return report
+
+    def insertWithDep(self, datum, table, depTable):
         # Takes a dictionary which contains exactly one list of dictionaries.
         # Fuck relational databases.
-        for key, value in datum:
+        for key, value in datum.items():
             if type(value) == list:
                 # Purge it from the primary record, for inserting.
                 del datum[key]
-                index = self.insert(datum, table).inserted_primary_key
+                index = self.insert(table, datum).inserted_primary_key[0]
+                print('inserted index:', index)
                 for item in value:
                     # Then insert it to its own table.
-                    item[self.getPkey(table)] = index
-                    self.insert(item, depTable)
-                return self.insert(datum, table)
+                    print(item)
+                    a = {self.getPkey(table):index}
+                    self.insert(depTable, a)
+                return self.insert(table, datum)
         
-    def updateWithDep(datum, olddatum, table, depTable):
+    def updateWithDep(self, datum, oldDatum, table, depTable):
         # Takes two dictionaries which contains exactly one list of 
         # dictionaries each.
         if datum == oldDatum:
             # No need to update the records, go home.
             return False
-        for key, value in datum:
+        for key, value in datum.items():
             if type(value) == list:
                 # Purge from the primary record.
                 del datum[key]
                 # Assign the same primary key to the new record.
                 pkey = self.getPkey(table)
-                datum[pkey] = olddatum[pkey]
-                self.update(datum, table)
+                datum[pkey] = oldDatum[pkey]
                 # Then, we need to insert and purge mismatching dependents.
                 # We're going to cross-compare and insert anything that isn't 
                 # in the old data, then delete anything that isn't in the new
                 # data.
-                for depkey, depvalue in value:
-                    if depvalue in oldDatum[key].values():
+                for i in value:
+                    if i in oldDatum[key]:
                         del oldDatum[key][depkey]
                     else:
-                        self.insert(depvalue, depTable)
+                        #FIXME Not applicable to other things.
+                        self.insert(depTable, {'nexthop':i})
                 for oldkey, oldvalue in oldDatum[key]:
                     if oldvalue not in value.values():
                         q = depTable.delete().where(oldvalue)
                         self.execute(q)
+                return self.update(datum, table)
