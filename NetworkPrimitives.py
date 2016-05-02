@@ -45,13 +45,16 @@ class Ip(str):
 
         # Now validate!
         # Split the address into its four octets
-        ipBytes = [int(b) for b in address.split('.')]
-        # Throw out anything that isn't a correct octet.
-        ipBytes = [b for b in ipBytes if 0 <= b < 256]
-        ipStr = '.'.join([str(b) for b in ipBytes])
-        # Make sure that it has four octets, and that we haven't lost anything.
-        if len(ipBytes) != 4 or ipStr != address:
-            raise InputError('Improper string submitted for IP address')
+        try:
+            ipBytes = [int(b) for b in address.split('.')]
+            # Throw out anything that isn't a correct octet.
+            ipBytes = [b for b in ipBytes if 0 <= b < 256]
+            ipStr = '.'.join([str(b) for b in ipBytes])
+            # Make sure that it has four octets, and that we haven't lost anything.
+            if len(ipBytes) != 4 or ipStr != address:
+                raise InputError('Improper string submitted for IP address')
+        except ValueError:
+            raise InputError('Not an IP address:' + str(address))
 
         # Sound like everything's fine!
         return super(Ip, cls).__new__(cls, address)

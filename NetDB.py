@@ -249,14 +249,15 @@ class NetDB(Database):
                 bad_usernames.append(bad_username)
         self.updateTable(self.tables['bad_usernames'], bad_usernames)
 
-    def custLookup(self, query):
+    def hostLookup(self, query):
         t = self.tables['hosts']
         if type(query) == Ip:
             records = self.execute(t.select().where(t.c.ip == query))
         elif type(query) == Mac:
             records = self.execute(t.select().where(t.c.mac == query))
         else:
-            return False
+            records = self.execute(t.select().where(t.c.hostname.\
+                ilike('%'+query+'%')))
         return self.recordsToListOfDicts(records)
 
     def getBadUsernames(self):

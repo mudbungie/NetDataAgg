@@ -21,17 +21,20 @@ def arpLookup(query, netdb):
     # Takes a string, determines what it is, and then returns basic 
     # information about the connection.
     try:
+        # If it's a Mac...
         query = Mac(query)
     except Exceptions.InputError:
         try:
+            # Or an Ip...
             query = Ip(query)
         except Exceptions.InputError:
-            return 'Please enter either a MAC or IP address..'
-    customers = netdb.custLookup(query)
-    for customer in customers:
+            # Otherwise, assume customer name.
+            pass 
+    hosts = netdb.hostLookup(query)
+    for host in hosts:
         # Make the IPs hyperlinks 'cause why not.
-        customer['ip'] = hyperLinkString(customer['ip'])
-    return pageWrap(listToTable(['hostname', 'ip', 'mac'], customers))
+        host['ip'] = hyperLinkString(host['ip'])
+    return pageWrap(listToTable(['hostname', 'ip', 'mac'], hosts))
 
 def listToTable(columns, data):
     # Make an HTML table out of a bunch of items. 
