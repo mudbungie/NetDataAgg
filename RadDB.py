@@ -1,7 +1,7 @@
 import sqlalchemy as sqla
 
 from Database import Database
-from Mac import Mac
+from NetworkPrimitives import Mac
 
 class RadDB(Database):
     # The only thing this class does is dump the entire RADIUS database.

@@ -1,7 +1,6 @@
 # Represents a network interface
 
-from Mac import Mac
-from Ip import Ip
+from NetworkPrimitives import Mac, Ip
 
 class Interface:
     def __init__(self, mac):

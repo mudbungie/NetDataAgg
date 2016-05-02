@@ -1,7 +1,6 @@
 # Class for a network object. 
 
-from Ip import Ip
-from Mac import Mac
+from NetworkPrimitives import Ip, Mac
 from Interface import Interface
 from Config import config
 import easysnmp

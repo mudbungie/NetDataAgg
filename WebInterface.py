@@ -1,11 +1,34 @@
 # Data formatting functions to give nice strings back to the webserver.
 
+from NetworkPrimitives import Ip, Mac
+import Exceptions
+
 def pageWrap(content):
     # Gives back an HTML body with standard head data.
     with open('webserver/htmlbase.html', 'r') as htmlbase:
         html = htmlbase.read()
     html = html.replace('%%%CONTENT%%%', content)
     return html
+
+def mainPage():
+    with open('webserver/htmlbase.html', 'r') as htmlbase:
+        html = htmlbase.read()
+    with open('webserver/index.html') as contentFile:
+        content = contentFile.read()
+    return html.replace('%%%CONTENT%%%', content)
+
+def arpLookup(query, netdb):
+    # Takes a string, determines what it is, and then returns basic 
+    # information about the connection.
+    try:
+        query = Mac(query)
+    except Exceptions.InputError:
+        try:
+            query = Ip(query)
+        except Exceptions.InputError:
+            return 'Please enter either a MAC or IP address..'
+    customers = netdb.custLookup(query)
+    return pageWrap(listToTable(['hostname', 'ip', 'mac'], customers))
 
 def listToTable(columns, data):
     # Make an HTML table out of a bunch of items. 

@@ -7,8 +7,7 @@ import re
 # Mine
 from Database import Database
 from Router import Router
-from Mac import Mac
-from Ip import Ip
+from NetworkPrimitives import Mac, Ip
 from Host import Host
 
 class NetDB(Database):
@@ -41,7 +40,7 @@ class NetDB(Database):
         histTable = self.tables['historicarp']
         self.updateLiveAndHist(table, histTable, arps)
         return True
-    '''
+    
     def updateRoutes(self, routingtables):
         # Takes list of dicts in format address, netmask, nexthop, router, key,
         # and commits them to the database.
@@ -49,7 +48,7 @@ class NetDB(Database):
         histTable = self.tables['historicroutes']
         for routingtable in routingtables:  
             self.updateLiveAndHist(table, histTable, routingtable)
-    '''
+    
     def updateRadius(self, raddb):
         radData = raddb.fetchRadData()
         table = self.tables['radius']
@@ -103,7 +102,7 @@ class NetDB(Database):
             arps.append({'ip':record.ip,'mac':record.mac})
         return arps
 
-    def radLookup(mac):
+    def radLookup(self, mac):
         table = self.initTable('radius')
 
         q = table.select().where(table.c.mac == mac)
@@ -249,6 +248,16 @@ class NetDB(Database):
                     'ip':host.ip}
                 bad_usernames.append(bad_username)
         self.updateTable(self.tables['bad_usernames'], bad_usernames)
+
+    def custLookup(self, query):
+        t = self.tables['hosts']
+        if type(query) == Ip:
+            records = self.execute(t.select().where(t.c.ip == query))
+        elif type(query) == Mac:
+            records = self.execute(t.select().where(t.c.mac == query))
+        else:
+            return False
+        return self.recordsToListOfDicts(records)
 
     def getBadUsernames(self):
         table = self.tables['bad_usernames']

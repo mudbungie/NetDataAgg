@@ -8,8 +8,7 @@ from datetime import datetime
 import re
 
 # Mine
-from Ip import Ip
-from Mac import Mac
+from NetworkPrimitives import Ip, Mac
 from Host import Host
 
 class Router(Host):
