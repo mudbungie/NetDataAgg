@@ -1,7 +1,13 @@
     <h2 style="text-align:center">Network Data</h2>
     <hr>
+    <form action="/host-lookup" method="post">
+        Lookup arp data by ip or mac:
+        <input type="text" name="query" id="query">
+        <input style="text-align:center" type="submit" value="Submit">
+        <br>
+    </form>
     <form action="/arp-lookup" method="post">
-        Lookup ip by ip, mac, or hostname:
+        Lookup host data by ip, mac, or hostname:
         <input type="text" name="query" id="query">
         <input style="text-align:center" type="submit" value="Submit">
         <br>

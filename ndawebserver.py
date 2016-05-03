@@ -20,13 +20,11 @@ def index():
     return WebInterface.mainPage()
 
 # ARP lookups
-@ndabottle.post('/arp-lookup')
-def macToIp():
-    # Exactly what it says on the box. Based on the DB's arp table.
-    # Typecasting is for input validation.
+@ndabottle.post('/host-lookup')
+def hostlookup():
     query = bottle.request.forms.get('query')
-    print('Attempted ARP lookup for:', query)
-    return WebInterface.arpLookup(query, netdb)
+    print('Attempted host lookup for:', query)
+    return WebInterface.hostLookup(query, netdb)
 
 @ndabottle.get('/zabbix-arp-mismatches')
 def getMismatches():
@@ -42,9 +40,11 @@ def getBadUsernames():
     table = WebInterface.listToTable(['hostname', 'username', 'ip'], answers)
     return WebInterface.pageWrap(table)
 
-@ndabottle.post('/host-lookup')
-def hostLookupPage():
-    pass
+@ndabottle.post('/arp-lookup')
+def arplookup():
+    query = bottle.request.forms.get('query')
+    print('Attempted ARP lookup for:', query)
+    return WebInterface.arpLookup(query, netdb)
 
 ndabottle.run(host='127.0.0.1', port=6001)
 

@@ -17,7 +17,7 @@ def mainPage():
         content = contentFile.read()
     return html.replace('%%%CONTENT%%%', content)
 
-def arpLookup(query, netdb):
+def hostLookup(query, netdb):
     # Takes a string, determines what it is, and then returns basic 
     # information about the connection.
     try:
@@ -35,6 +35,24 @@ def arpLookup(query, netdb):
         # Make the IPs hyperlinks 'cause why not.
         host['ip'] = hyperLinkString(host['ip'])
     return pageWrap(listToTable(['hostname', 'ip', 'mac'], hosts))
+
+def arpLookup(query, netdb):
+    # More limited version of hostLookup, just checks for ARP.
+    try:
+        # If it's a Mac...
+        query = Mac(query)
+    except Exceptions.InputError:
+        try:
+            # Or an Ip...
+            query = Ip(query)
+        except Exceptions.InputError:
+            # Otherwise, assume customer name.
+            return 'Please enter an IP or MAC address.'
+    hosts = netdb.arpLookup(query)
+    for host in hosts:
+        # Make the IPs hyperlinks 'cause why not.
+        host['ip'] = hyperLinkString(host['ip'])
+    return pageWrap(listToTable(['ip', 'mac'], hosts))
 
 def listToTable(columns, data):
     # Make an HTML table out of a bunch of items. 

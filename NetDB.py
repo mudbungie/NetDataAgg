@@ -66,32 +66,16 @@ class NetDB(Database):
         self.updateTable(self.tables['zabhosts'], hosts)
         return True
 
-    def arpLookup(self, ip=None, mac=None):
-        table = self.initTable('arp')
+    def arpLookup(self, query):
+        t = self.initTable('arp')
 
-        if ip:
-            # Get matching ARP data
-            q = table.select().where(table.c.ip == ip)
-            macs = []
-            # Go through all matching records
-            for record in self.connection.execute(q):
-                # Instantiate results
-                mac = Mac(record.mac)
-                macs.append(mac)
-            return macs
-        elif mac:
-            # Get matching ARP data
-            q = table.select().where(table.c.mac == mac)
-            ips = []
-            # Go through all matching records
-            for record in self.connection.execute(q):
-                # Instantiate results
-                ip = Ip(record.ip)
-                ips.append(ip)
-            return ips
+        if type(query) == Ip:
+            records = self.execute(t.select().where(t.c.ip == query))
+        elif type(query) == Mac:
+            records = self.execute(t.select().where(t.c.mac == query))
         else:
-            # Gotta give one or the other
-            return False
+            raise Exception # Should never happen
+        return self.recordsToListOfDicts(records)
 
     def getArps(self):
         table = self.tables['arp']
