@@ -1,7 +1,7 @@
 # Zabbix is a network management database
 
 from Database import Database
-from Ip import Ip
+from NetworkPrimitives import Ip
 
 import re
 

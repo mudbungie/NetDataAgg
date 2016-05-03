@@ -1,7 +1,7 @@
 # Freeside is our billing and accounting system.
 
 from Database import Database
-from Ip import Ip
+from NetworkPrimitives import Ip
 from functions import sanitizeString
 
 class FreesideDB(Database):
