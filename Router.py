@@ -137,7 +137,9 @@ class Router(Host):
             except KeyError:
                 # There isn't an ARP entry for the route, means it's 
                 # non-actionable, and we won't record it.
-                return 2
+                # We're keeping nonlocal routes now.
+                #return 2
+                pass
 
             # The first four octets should be a destination IP.
             address = Ip('.'.join(index[0:4]))
