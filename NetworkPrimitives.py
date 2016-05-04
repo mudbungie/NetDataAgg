@@ -46,7 +46,8 @@ class Ip(str):
         # Now validate!
         # Split the address into its four octets
         try:
-            ipBytes = [int(b) for b in address.split('.')]
+            self.octets = address.split('.')
+            self.octets = [int(b) for b in self.octets]
             # Throw out anything that isn't a correct octet.
             ipBytes = [b for b in ipBytes if 0 <= b < 256]
             ipStr = '.'.join([str(b) for b in ipBytes])
@@ -59,16 +60,31 @@ class Ip(str):
         # Sound like everything's fine!
         return super(Ip, cls).__new__(cls, address)
 
-    def bits(self):
-        # For converting the IP to bits, usually for CIDR notation.
-        octets = self.split('.')
-        # Start high and count down, so that we can use efficient bitwise ops.
-        bits = 32
-        for octet in octets:
-            # Invert it, because netmask is backwards.
-            octet = 255 - int(octet)
-            while octet > 0:
-                bits -= 1
-                # Bitwise left-shift the octet.
-                octet = octet >> 1
-        return bits
+class Netmask(int):
+    def __new__(cls, a):
+        # Check if it's numeric.
+        try:
+            a = int(a)
+            if 0 <= a <= 32:
+                return super(Netmask, cls).__new__(cls, a)
+            else:
+                raise ValueError('Netmask outside of range')
+        # Otherwise, we need to validate the format and do bitwise counting.
+        except ValueError:
+            try:
+                # See if it's a valid dotted address.
+                a = Ip(a)
+                # Then do reverse bitwise counting, since netmask is inverted.
+                bits = 32
+                prevOctet = 255 # Used for actual value validation.
+                for octet in a.octets():
+                    if octet > prevOctet or (octet != 0 and octet % 2 == 0):
+                        raise ValueError('Valid IP address, but not netmask.')
+                    prevOctet = octet
+                    octet = 255 - octet
+                    while octet > 0:
+                        bits -= 1
+                    octet = octet >> 1
+            except ValueError('Not a netmask by integer or dot-formatting.'):
+            return super(Netmask, cls).__new__(cls, bits)
+

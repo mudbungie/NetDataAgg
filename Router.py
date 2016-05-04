@@ -8,7 +8,7 @@ from datetime import datetime
 import re
 
 # Mine
-from NetworkPrimitives import Ip, Mac
+from NetworkPrimitives import Ip, Mac, Netmask
 from Host import Host
 
 class Router(Host):
@@ -163,7 +163,7 @@ class Router(Host):
             # but individual SNMP responses only contain a single route.
             nexthops = [nexthop]
             # The bits method does bit-math, and returns a CIDR int.
-            netmask = Ip('.'.join(index[4:8])).bits()
+            netmask = Netmask('.'.join(index[4:8]))
 
         # This catch comes from the nexthop, address, or netmask encoding.
         except AssertionError:
