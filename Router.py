@@ -80,100 +80,31 @@ class Router(Host):
     def getRoutingTable(self):
         print('Scanning routing table for router at:', self.ip)
         # Walk the routing table
-        # I'm just running the direct oid
-        mib = '1.3.6.1.2.1.4.24.4.1'
+        mib = 'ipCidrRouteTable'
         responses = self.walk(mib)
-        self.routingTable = {} # Internally, we'll want to do lookups.
-        self.singleHostRoutes = {} # Same data, but for just direct connections.
-        self.directRoutes = {}
-        # The SNMP routing table is not logical, Have to deduplicate it.
-        seen = set()
         errors = 0
-        multipleroutes = 0
-        unrouteable = 0
-        redundantresponses = 0
-        for response in responses:
-            if response.oid_index not in seen:
-                seen.add(response.oid_index)
-                # Method false on failure, also adds the route to the Router's
-                # local table.
-                route = self.processSNMPRoute(response)
-                if route == 0:
-                    # Indicates success. Get it out of the way.
-                    pass
-                elif route == 1:
-                    # Malformed response. Real error.
-                    errors += 1
-                elif route == 2:
-                    # Route isn't in ARP table, ignored. 
-                    unrouteable += 1
-                elif route == 3:
-                    # Means that multiple routes were found.
-                    multipleroutes += 1
-                elif route == 4:
-                    redundantresponses += 1
-                else:
-                    # Should never happen
-                    raise AssertionError('Route parser didn\'t return.')
-        print('Recorded', len(self.routingTable), 'routes, of which', 
-            multipleroutes, 'are multiply routed, ignoring',
-            errors, 'errors, ', unrouteable, 'non-local routes,',
-            redundantresponses, 'redundant responses.')
-        counter = 0
-        fails = 0
-        return self.routingTable
-
-    def processSNMPRoute(self, response):
-        # Take messy SNMP and make a Route dictionary in the self namespace.
-        # Malformed data provokes no action.
-        index = response.oid_index.split('.')
-        try:
-            # First, we want to extract our nexthop, because it's the first
-            # failure case.
-            nexthop = Ip('.'.join(index[9:13]))
+        routes = {} # Internally, we'll want to do lookups.
+        print('Recieved', len(responses), 'SNMP responses from', self.ip)
+        for r in responses:
             try:
-                # See if there is layer-2 resolution for the next hop.
-                self.arpByIp[nexthop]
+                # An assumption is that the destinations come first.
+                if r.oid == 'ipCidrRouteDest':
+                    # Introduce the route.
+                    routes[r.oid_index] = {'destination':Ip(r.value),
+                                                'router':self.ip}
+                # The other conditions just add values.
+                elif r.oid == 'ipCidrRouteMask':
+                    routes[r.oid_index]['netmask'] = Netmask(r.value)
+                elif r.oid == 'ipCidrRouteNextHop':
+                    routes[r.oid_index]['nexthop'] = Ip(r.value)
             except KeyError:
-                # There isn't an ARP entry for the route, means it's 
-                # non-actionable, and we won't record it.
-                # We're keeping nonlocal routes now.
-                #return 2
-                pass
+                # Would mean that a value came in without our seeing the
+                # destination first.
+                errors += 1
+        # The index on this is useless outside of populating the routes. 
+        # I'm going to do a single pass to make a more useful index.
+        self.routes = {}
+        for r in routes.values():
+            self.routes[r['destination']+str(r['netmask'])+r['nexthop']] = r
+        return self.routes
 
-            # The first four octets should be a destination IP.
-            address = Ip('.'.join(index[0:4]))
-            try:
-                # Check if we already have a route for this address.
-                existingRoute = self.routingTable[address]
-                knownHops = existingRoute['nexthops']
-                # Then, see if we've already seen this hop before.
-                if not nexthop in knownHops:
-                    knownHops.append(nexthop)
-                    # If we're updating an existing route, then we're done.
-                    # Use a response code, because we count these.
-                    return 3
-                else:
-                    # Redundant responses are an interesting error.
-                    return 4
-            except KeyError:
-                # This is a new route, so go proceed to record it as such.
-                pass
-            # Nexthops is always a list, to account for multiple routes,
-            # but individual SNMP responses only contain a single route.
-            nexthops = [nexthop]
-            # The bits method does bit-math, and returns a CIDR int.
-            netmask = Netmask('.'.join(index[4:8]))
-
-        # This catch comes from the nexthop, address, or netmask encoding.
-        except AssertionError:
-            # Indicates a malformed address. 
-            print(response.oid_index, response.value)
-            return 1
-
-        # Now that everything has passed verification, make it a dictionary.
-        route = {'address':address,'netmask':netmask,'nexthops':nexthops,
-            'router':self.ip}
-        # Add it to the routing table! This is really the whole point.
-        self.routingTable[address] = route
-        return 0

@@ -343,4 +343,4 @@ class Database:
                     if oldvalue not in value.values():
                         q = depTable.delete().where(oldvalue)
                         self.execute(q)
-                return self.update(datum, table)
+                return self.update(table, datum)

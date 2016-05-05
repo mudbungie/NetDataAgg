@@ -54,6 +54,15 @@ def arpLookup(query, netdb):
         host['ip'] = hyperLinkString(host['ip'])
     return pageWrap(listToTable(['ip', 'mac'], hosts))
 
+def routeLookup(query, netdb):
+    try:
+        # Validate...
+        query = Ip(query)
+    except Exceptions.InputError:
+        return 'IP addresses only.'
+    routes = netdb.findRoute(query)
+    return pageWrap(listToTable(['address', 'router', 'nexthop'], routes))
+
 def listToTable(columns, data):
     # Make an HTML table out of a bunch of items. 
     # Columns should be a list of strings. 

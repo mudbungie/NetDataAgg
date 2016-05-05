@@ -26,10 +26,6 @@ def hostlookup():
     print('Attempted host lookup for:', query)
     return WebInterface.hostLookup(query, netdb)
 
-@ndabottle.get('/zabbix-arp-mismatches')
-def getMismatches():
-    print('Getting zabbix-arp')
-
 @ndabottle.get('/bad-usernames')
 def getBadUsernames():
     answers = netdb.getBadUsernames()
@@ -46,5 +42,11 @@ def arplookup():
     print('Attempted ARP lookup for:', query)
     return WebInterface.arpLookup(query, netdb)
 
-ndabottle.run(host='127.0.0.1', port=6001)
+@ndabottle.post('/route-lookup')
+def routelookup():
+    query = bottle.request.forms.get('query')
+    print('Attempted route lookup for:', query)
+    return WebInterface.routeLookup(query, netdb)
+
+ndabottle.run(host='127.0.0.1', port=config['webport'])
 

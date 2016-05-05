@@ -1,9 +1,10 @@
 # Not mine
-import sqlalchemy as sqla
 from datetime import datetime
+import sqlalchemy as sqla
 import os
 import time
 import re
+import ipaddress
 # Mine
 from Database import Database
 from Router import Router
@@ -30,7 +31,6 @@ class NetDB(Database):
                     'bad_usernames',
                     'routes',
                     'historicroutes',
-                    'nexthops',
                     ]
 
     def updateArp(self, arps):
@@ -85,6 +85,38 @@ class NetDB(Database):
             # Make a little dict
             arps.append({'ip':record.ip,'mac':record.mac})
         return arps
+
+    def findRoute(self, address):
+        # When given an address, find out how it would be routed.
+        # Start off checking smaller routes, and grow larger.
+        r = self.tables['routes']
+        nh = self.tables['nexthops']
+        netmask = 32
+        routeids = {}
+        while netmask >= 0:
+            print('Checking netmask', netmask, 'address', address)
+            q = r.select().where(sqla.and_(r.c.netmask == netmask,
+                r.c.address == address))
+            routes = self.execute(q)
+            #FIXME Add handling for empty return. Forgot the name of the error.
+            if routes.rowcount > 0:
+                for route in routes:
+                    print(route)
+                    routeids[route.routeid] = route.router
+                q = nh.select().where(nh.c.routeid.in_(routeids.keys()))
+                nexthops = self.execute(q)
+                for nexthop in nexthops:
+                    # Add in the next hop data to the route set.
+                    routeids[nexthop.routeid] = {'address':address + str(netmask),
+                                                'router':route.router,
+                                                'nexthop':nexthop.nexthop}
+                return routeids
+                
+            # If we didn't find it there, expand to the next smallest network.
+            address = str(ipaddress.ip_network(address).\
+                supernet(new_prefix=netmask).network_address)
+            netmask -= 1
+        return None
 
     def radLookup(self, mac):
         table = self.initTable('radius')
@@ -254,114 +286,45 @@ class NetDB(Database):
         # Takes a dictionary from a Router, commits it to the Routes table,
         # and has a mapped dependent table for the destination, because that
         # relationship is one-to-many.
-        routesTable = self.tables['routes']
-        nextHopTable = self.tables['nexthops']
+        t = self.tables['routes']
+        ht = self.tables['historicroutes']
+        now = datetime.now()
         routeraddr = router.ip
-        routingdata = router.routingTable
-        
-        # We'll start by just pulling both tables so that they're easier to 
-        # work with.
-        # The routes table has a info on other routers, which we don't want.
-        oldRoutesQuery = routesTable.select().\
-            where(routesTable.c.router == routeraddr)
-        r = self.recordsToDictOfDicts(self.execute(oldRoutesQuery), 'address')
-        oldRoutes = self.GetDependentRecords(r, nextHopTable, 'routeid')
-        print('Retrieved', len(oldRoutes), 'old routes.')
+        newRoutes = router.routes
+        q = t.select().where(t.c.router == routeraddr)
+        oldRouteList = recordsToListOfDicts(self.execute(q))
+        oldRoutes = {}
+        for r in oldRouteList:
+            oldRoutes[r['destination']+str(r['netmask'])+r['nexthop']] = r
 
-        # Now that the old routes are normalized, we'll check for updates and
-        # new records. 
-        newRoutes = 0
-        stableRoutes = 0
-        purgedRoutes = 0
-        updatedRoutes = 0
-        newHops = 0
-        stableHops = 0
-        purgedHops = 0 
-        self.updateTableAndDep(routingdata, oldRoutes, routesTable, nextHopTable)
-        '''
-        # Hops don't get updated.
-        for route in routingdata.values():
+        # We're going to depopulate the olds and expire anything that remains,
+        # insert anything that wasn't there to expire, and ignore anything 
+        # that occurs in both routing tables.
+        new = 0
+        old = 0
+        expired = 0
+        for key, route in newRoutes.items():
             try:
-                # This line fails if the route is new, and we insert.
-                oldRoute = oldRoutes[route['address']]
-                index = oldRoute['routeid']
-                if route['netmask'] != oldRoute['netmask']:
-                    # For updates, we need to match id.
-                    iroute = route.copy()
-                    iroute['routeid'] = index
-                    del iroute['nexthops']
-                    self.update(routesTable, route)
-                    updatedRoutes += 1
-                else:
-                    stableRoutes += 1
-                
-                currenthops = route['nexthops']
-                try:
-                    oldhops = oldRoute['nexthops']
-                except KeyError:
-                    # Means that an old route has no hops, which means it is
-                    # defunct. Should be purged.
-                    self.delete(routesTable, oldRoute['routeid'])
-                    purgedRoutes += 1
-                    oldhops = []
-
-                # Add in new hops...
-                for hop in currenthops:
-                    if hop not in oldhops:
-                        self.insert(nextHopTable, {'routeid':index,'nexthop':hop})
-                        newHops += 1
-                    else:
-                        stableHops += 1
-                # and purge the old.
-                for hop in oldhops:
-                    if hop not in currenthops:
-                        self.deleteHop(hop['routeid'], hop['nexthop'])
-                        purgedHops += 1
-
+                # Means that we've seen it, do nothing.
+                del oldRoute[key]
+                old += 1
             except KeyError:
-                index = self.insertRoute(route)
-                newRoutes += 1
-                newHops += len(route['nexthops'])
-
-        # Don't forget to purge old routes!
-        for route in oldRoutes.values():
-            try:
-                # If the old record isn't in the new records.
-                routingdata[route['address']]
-            except KeyError:
-                self.delete(routesTable, route['routeid'])
-                purgedRoutes += 1
-                # And orphaned hops!
-                q = nextHopTable.delete().\
-                    where(nextHopTable.c.routeid == route['routeid'])
-                self.execute(q)
-                
-
-        print('Recorded', newRoutes, 'new routes, updated', updatedRoutes,
-            'old routes, and purged', purgedRoutes, 'defunct routes.')
-        print(stableRoutes, 'consistent routes were unaffected.')
-        print('Recorded', newHops, 'new nexthops, purged', purgedHops,
-            'defunct nexthops.')
-        print(stableHops, 'consistent hops were unaffected.')
-        '''
-
-    def insertRoute(self, route):
-        routesTable = self.tables['routes']
-        nextHopTable = self.tables['nexthops']
-        # We need to take the hops out, and handle them separately. We insert
-        # the route, then takes its primary key as an id to index the routes.
-        hops = route['nexthops']
-        iroute = route.copy()
-        del iroute['nexthops']
-        index = self.insert(routesTable, iroute).inserted_primary_key[0]
-        inserts = 0
-        for hop in hops:
-            self.insert(nextHopTable, {'routeid':index,'nexthop':hop})
-            inserts += 1
-        return inserts
-
-    def deleteHop(self, routeid, nexthop):
-        #FIXME Generalize this and put it into Database.py.
-        t = self.tables['nexthops']
-        q = t.delete().where(sqla.and_(t.c.routeid == routeid, t.c.nexthop == nexthop))
-        self.execute(q)
+                # It's new, insert it.
+                self.insert(t, route)
+                # Also, put it in the historic table.
+                route['observed'] = now
+                self.insert(ht, route)
+                new += 1
+        # Anything left in this list after the purge is outdated. Expire it!
+        for r in oldRoutes.values():
+            # Expire the historic record.
+            q = ht.update().where(ht.c.destination == r['destination'],
+                ht.c.netmask == r['netmask'], ht.c.nexthop == r['nexthop']).\
+                values(expired=now)
+            self.execute(q)
+            # Delete the current record.
+            q = t.delete().where(t.c.destination == r['destination'],
+                t.c.netmask == r['netmask'], t.c.nexthop == r['nexthop'])
+            self.execute(q)
+            expired += 1
+        return new, old, expired

@@ -42,23 +42,25 @@ class Ip(str):
         else:
             # Means invalid encoding passed.
             raise Exception('Improper encoding passed with IP address')
-
         # Now validate!
-        # Split the address into its four octets
+        cls.octets(address)
+        return super(Ip, cls).__new__(cls, address)
+
+    def octets(address):
         try:
-            self.octets = address.split('.')
-            self.octets = [int(b) for b in self.octets]
+            # Split the address into its four octets
+            octets = address.split('.')
+            octets = [int(b) for b in octets]
             # Throw out anything that isn't a correct octet.
-            ipBytes = [b for b in ipBytes if 0 <= b < 256]
+            ipBytes = [b for b in octets if 0 <= b < 256]
             ipStr = '.'.join([str(b) for b in ipBytes])
             # Make sure that it has four octets, and that we haven't lost anything.
             if len(ipBytes) != 4 or ipStr != address:
                 raise InputError('Improper string submitted for IP address')
         except ValueError:
             raise InputError('Not an IP address:' + str(address))
-
         # Sound like everything's fine!
-        return super(Ip, cls).__new__(cls, address)
+        return octets
 
 class Netmask(int):
     def __new__(cls, a):
@@ -71,20 +73,22 @@ class Netmask(int):
                 raise ValueError('Netmask outside of range')
         # Otherwise, we need to validate the format and do bitwise counting.
         except ValueError:
-            try:
-                # See if it's a valid dotted address.
-                a = Ip(a)
-                # Then do reverse bitwise counting, since netmask is inverted.
-                bits = 32
-                prevOctet = 255 # Used for actual value validation.
-                for octet in a.octets():
-                    if octet > prevOctet or (octet != 0 and octet % 2 == 0):
-                        raise ValueError('Valid IP address, but not netmask.')
-                    prevOctet = octet
-                    octet = 255 - octet
-                    while octet > 0:
-                        bits -= 1
+            # See if it's a valid dotted address.
+            a = Ip(a)
+            # Then do reverse bitwise counting, since netmask is inverted.
+            bits = 32
+            prevOctet = 255 # Used for actual value validation.
+            for octet in a.octets():
+                if octet > prevOctet or (octet != 255 and octet % 2 == 1):
+                    print(octet, prevOctet, a, bits)
+                    raise ValueError('Valid IP address, but not netmask.')
+                prevOctet = octet
+                octet = 255 - octet
+                if octet > 0:
+                    bits -= 1
+                    # Bitwise left-shift of the octet
                     octet = octet >> 1
-            except ValueError('Not a netmask by integer or dot-formatting.'):
+                octet = octet >> 1
+
             return super(Netmask, cls).__new__(cls, bits)
 
