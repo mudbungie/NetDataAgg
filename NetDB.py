@@ -41,14 +41,6 @@ class NetDB(Database):
         self.updateLiveAndHist(table, histTable, arps)
         return True
     
-    def updateRoutes(self, routingtables):
-        # Takes list of dicts in format address, netmask, nexthop, router, key,
-        # and commits them to the database.
-        table = self.tables['routes']
-        histTable = self.tables['historicroutes']
-        for routingtable in routingtables:  
-            self.updateLiveAndHist(table, histTable, routingtable)
-    
     def updateRadius(self, raddb):
         radData = raddb.fetchRadData()
         table = self.tables['radius']
@@ -85,38 +77,6 @@ class NetDB(Database):
             # Make a little dict
             arps.append({'ip':record.ip,'mac':record.mac})
         return arps
-
-    def findRoute(self, address):
-        # When given an address, find out how it would be routed.
-        # Start off checking smaller routes, and grow larger.
-        r = self.tables['routes']
-        nh = self.tables['nexthops']
-        netmask = 32
-        routeids = {}
-        while netmask >= 0:
-            print('Checking netmask', netmask, 'address', address)
-            q = r.select().where(sqla.and_(r.c.netmask == netmask,
-                r.c.address == address))
-            routes = self.execute(q)
-            #FIXME Add handling for empty return. Forgot the name of the error.
-            if routes.rowcount > 0:
-                for route in routes:
-                    print(route)
-                    routeids[route.routeid] = route.router
-                q = nh.select().where(nh.c.routeid.in_(routeids.keys()))
-                nexthops = self.execute(q)
-                for nexthop in nexthops:
-                    # Add in the next hop data to the route set.
-                    routeids[nexthop.routeid] = {'address':address + str(netmask),
-                                                'router':route.router,
-                                                'nexthop':nexthop.nexthop}
-                return routeids
-                
-            # If we didn't find it there, expand to the next smallest network.
-            address = str(ipaddress.ip_network(address).\
-                supernet(new_prefix=netmask).network_address)
-            netmask -= 1
-        return None
 
     def radLookup(self, mac):
         table = self.initTable('radius')
@@ -282,6 +242,10 @@ class NetDB(Database):
         badUsernames = self.recordsToListOfDicts(records)
         return badUsernames
 
+    def updateAllRoutes(self, routers):
+        for router in routers:
+            self.updateRoutes(router)
+
     def updateRoutes(self, router):
         # Takes a dictionary from a Router, commits it to the Routes table,
         # and has a mapped dependent table for the destination, because that
@@ -294,6 +258,8 @@ class NetDB(Database):
         q = t.select().where(t.c.router == routeraddr)
         oldRouteList = self.recordsToListOfDicts(self.execute(q))
         oldRoutes = {}
+        # Make an index out of the relevant route data, so that lookups aren't
+        # so expensive,
         for r in oldRouteList:
             oldRoutes[r['destination']+str(r['netmask'])+r['nexthop']] = r
 
@@ -327,4 +293,37 @@ class NetDB(Database):
                 t.c.netmask == r['netmask'], t.c.nexthop == r['nexthop']))
             self.execute(q)
             expired += 1
+        print('Router at',routeraddr,'corroborated',old,
+            'previously known routes, and reported',new,
+            'previously known routes.')
+        print(expired,'unconfirmed routes have been expired from the database.')
         return new, old, expired
+
+    def findRoute(self, destination):
+        # When given an address, find out how it would be routed.
+        # Start off checking smaller routes, and grow larger.
+        r = self.tables['routes']
+        netmask = 32
+        data = []
+        while netmask >= 0:
+            print('Checking netmask', netmask, 'destination', destination)
+            q = r.select().where(sqla.and_(r.c.netmask == netmask,
+                r.c.destination == destination))
+            routes = self.execute(q)
+
+            if routes.rowcount > 0:
+                for route in routes:
+                    datum = {'destination':route.destination,
+                        'netmask':route.netmask,
+                        'nexthop':route.nexthop,
+                        'router':route.router}
+                    data.append(datum)
+                return data
+                
+            # If we didn't find it there, expand to the next smallest network.
+            netmask -= 1
+            destination = str(ipaddress.ip_network(destination).\
+                supernet(new_prefix=netmask).network_address)
+
+        return None
+

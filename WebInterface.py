@@ -61,7 +61,8 @@ def routeLookup(query, netdb):
     except Exceptions.InputError:
         return 'IP addresses only.'
     routes = netdb.findRoute(query)
-    return pageWrap(listToTable(['address', 'router', 'nexthop'], routes))
+    return pageWrap(listToTable(['destination', 'netmask', 'nexthop', 
+        'router'], routes))
 
 def listToTable(columns, data):
     # Make an HTML table out of a bunch of items. 
@@ -84,7 +85,7 @@ def listToTable(columns, data):
         # If it's a dict, do matching to the column names.
         elif type(datum) == dict or issubclass(type(datum),dict):
             for i in range(len(columns)):
-                html += '<td>' + datum[columns[i]] + '</td>'
+                html += '<td>' + str(datum[columns[i]]) + '</td>'
         html += '</tr>\n'
     html += '</table>'
     return html

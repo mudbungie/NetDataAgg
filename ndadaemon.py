@@ -18,7 +18,7 @@ from Network import Network
 initdbs = True
 initnet = True
 scanarp = True
-scanroutes = False
+scanroutes = True
 pullforeigndbs = True
 verifyarp = True
 verifyusernames = True
@@ -46,7 +46,7 @@ if __name__ == '__main__':
     if scanroutes:
         print('Updating Routing Table...')
         yknet.scanRouterRoutingTables()
-        netdb.updateRoutes(yknet.globalRoutingTable)
+        netdb.updateAllRoutes(yknet.routers.values())
 
     if pullforeigndbs:
         print('Updating Radius...')

@@ -106,5 +106,6 @@ class Router(Host):
         self.routes = {}
         for r in routes.values():
             self.routes[r['destination']+str(r['netmask'])+r['nexthop']] = r
+        print('Parsed', len(self.routes), 'routes.')
         return self.routes
 
