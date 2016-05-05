@@ -82,7 +82,23 @@ class Database:
                 datum[column] = getattr(record, column)
             data.append(datum)
         return data
-    
+
+    def recordsToIndexedDicts(self, records):
+        # For creating a dictionary when there is no pkey.
+        columns = records.keys()
+        # The column ordering needs to be deterministic.
+        columns.sort()
+        data = {}
+        for record in records:
+            datum = {}
+            key = ''
+            for column in columns:
+                field = getattr(record, column)
+                key += field
+                datum[column] = field
+            data[key] = datum
+        return 
+
     def recordsToDictOfDicts(self, records, pkey):
         columns = records.keys()
         data = {}

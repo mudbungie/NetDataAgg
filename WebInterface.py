@@ -60,9 +60,9 @@ def routeLookup(query, netdb):
         query = Ip(query)
     except Exceptions.InputError:
         return 'IP addresses only.'
-    routes = netdb.findRoute(query)
+    routes = netdb.findValidRoutes(query)
     return pageWrap(listToTable(['destination', 'netmask', 'nexthop', 
-        'router'], routes))
+        'router', 'nexthopmac'], routes))
 
 def listToTable(columns, data):
     # Make an HTML table out of a bunch of items. 

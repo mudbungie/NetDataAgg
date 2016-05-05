@@ -299,7 +299,7 @@ class NetDB(Database):
         print(expired,'unconfirmed routes have been expired from the database.')
         return new, old, expired
 
-    def findRoute(self, destination):
+    def findRoutes(self, destination):
         # When given an address, find out how it would be routed.
         # Start off checking smaller routes, and grow larger.
         r = self.tables['routes']
@@ -327,3 +327,23 @@ class NetDB(Database):
 
         return None
 
+    def findValidRoutes(self, destination):
+        # Return all routes for an address that the router can execute via ARP.
+        routes = self.findRoutes(destination)
+        # Get arps, and index them so that we can look them up.
+        arpRecords = self.execute(self.tables['arp'].select())
+        arps = {}
+        for record in arpRecords:
+            arps[record.source + record.ip] = record.mac
+        # Then, add in MAC information to those routes that exist, and purge
+        # anything that isn't arp-resolvable.
+        validRoutes = []
+        for route in routes:
+            try:
+                route['nexthopmac'] = arps[route['router'] +\
+                    route['nexthop']]
+                validRoutes.append(route)
+            except KeyError:
+                print(route)
+                pass
+        return validRoutes
