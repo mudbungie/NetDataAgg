@@ -292,7 +292,7 @@ class NetDB(Database):
         routeraddr = router.ip
         newRoutes = router.routes
         q = t.select().where(t.c.router == routeraddr)
-        oldRouteList = recordsToListOfDicts(self.execute(q))
+        oldRouteList = self.recordsToListOfDicts(self.execute(q))
         oldRoutes = {}
         for r in oldRouteList:
             oldRoutes[r['destination']+str(r['netmask'])+r['nexthop']] = r
@@ -306,7 +306,7 @@ class NetDB(Database):
         for key, route in newRoutes.items():
             try:
                 # Means that we've seen it, do nothing.
-                del oldRoute[key]
+                del oldRoutes[key]
                 old += 1
             except KeyError:
                 # It's new, insert it.
@@ -318,13 +318,13 @@ class NetDB(Database):
         # Anything left in this list after the purge is outdated. Expire it!
         for r in oldRoutes.values():
             # Expire the historic record.
-            q = ht.update().where(ht.c.destination == r['destination'],
-                ht.c.netmask == r['netmask'], ht.c.nexthop == r['nexthop']).\
+            q = ht.update().where(sqla.and_(ht.c.destination == r['destination'],
+                ht.c.netmask == r['netmask'], ht.c.nexthop == r['nexthop'])).\
                 values(expired=now)
             self.execute(q)
             # Delete the current record.
-            q = t.delete().where(t.c.destination == r['destination'],
-                t.c.netmask == r['netmask'], t.c.nexthop == r['nexthop'])
+            q = t.delete().where(sqla.and_(t.c.destination == r['destination'],
+                t.c.netmask == r['netmask'], t.c.nexthop == r['nexthop']))
             self.execute(q)
             expired += 1
         return new, old, expired

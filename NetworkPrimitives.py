@@ -84,11 +84,10 @@ class Netmask(int):
                     raise ValueError('Valid IP address, but not netmask.')
                 prevOctet = octet
                 octet = 255 - octet
-                if octet > 0:
+                while octet > 0:
                     bits -= 1
                     # Bitwise left-shift of the octet
                     octet = octet >> 1
-                octet = octet >> 1
 
             return super(Netmask, cls).__new__(cls, bits)
 
