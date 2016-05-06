@@ -295,7 +295,7 @@ class NetDB(Database):
             expired += 1
         print('Router at',routeraddr,'corroborated',old,
             'previously known routes, and reported',new,
-            'previously known routes.')
+            'new routes.')
         print(expired,'unconfirmed routes have been expired from the database.')
         return new, old, expired
 

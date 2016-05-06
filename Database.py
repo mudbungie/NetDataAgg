@@ -251,8 +251,8 @@ class Database:
                     # so that we don't conflict with other records from the 
                     # same batch.
                     currentData[datum[pkey]] = datum
-                    print('update:', datum)
-                    print('oldate:', relevantCurrentData)
+                    #print('update:', datum)
+                    #print('oldate:', relevantCurrentData)
                 else:
                     unchanged += 1
                     pass

@@ -86,11 +86,12 @@ class Host:
         ifnames = self.snmpwalk(descmib)
         if snmpmacs:
             self.online = True
-            print('ON:', self.ip)
+            #print('ON:', self.ip)
             for snmpmac in snmpmacs:
                 # Filter out empty responses.
                 if len(snmpmac.value) > 0:
                     mac = Mac(snmpmac.value, encoding='utf-16')
+                    print(mac)
                     interface = (Interface(mac))
                     for ifname in ifnames:
                         # Get the associated name of the interface.
@@ -102,7 +103,7 @@ class Host:
             return self.interfaces
         else:
             self.online = False
-            print('OFF:', self.ip)
+            #print('OFF:', self.ip)
             return None
     
     def getStatusPage(self):
