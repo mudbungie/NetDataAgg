@@ -6,11 +6,13 @@ import bottle
 
 from Config import config
 from NetDB import NetDB
+from ZabDB import ZabDB
 from NetworkPrimitives import Mac, Ip
 import WebInterface
 
 ndabottle = bottle.Bottle()
 netdb = NetDB(config['databases']['netdata'])
+zabdb = ZabDB(config['databases']['zabbix'])
 
 # Index page, full of search bars.
 @ndabottle.route('/')
@@ -35,6 +37,10 @@ def getBadUsernames():
         answer['ip'] = '<a href="http://'+answer['ip']+'">'+answer['ip']+'</a>'
     table = WebInterface.listToTable(['hostname', 'username', 'ip'], answers)
     return WebInterface.pageWrap(table)
+
+@ndabottle.get('/disabled-hosts')
+def getDisabledHosts():
+    return WebInterface.getDisabledHosts(zabdb)
 
 @ndabottle.post('/arp-lookup')
 def arplookup():

@@ -67,5 +67,14 @@ class ZabDB(Database):
             hosts.append(host)
         return hosts
 
-    def getHostByIp(self):
-        pass
+    def getDisabledHosts(self):
+        # Admins throw an "enabled" flag when disabling customers. This shows
+        # hosts that are disabled in that manner.
+        t = self.tables['hosts']
+        q = t.select().where(t.c.status == 1)
+        hosts = []
+        for record in self.execute(q):
+            host = {}
+            host['hostname'] = record.name
+            hosts.append(host)
+        return hosts

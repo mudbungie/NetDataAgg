@@ -64,6 +64,11 @@ def routeLookup(query, netdb):
     return pageWrap(listToTable(['destination', 'netmask', 'nexthop', 
         'router', 'nexthopmac'], routes))
 
+def getDisabledHosts(zabdb):
+    hosts = zabdb.getDisabledHosts()
+    print('Reporting', len(hosts), 'disabled hosts.')
+    return pageWrap(listToTable(['hostname'], hosts))
+
 def listToTable(columns, data):
     # Make an HTML table out of a bunch of items. 
     # Columns should be a list of strings. 
