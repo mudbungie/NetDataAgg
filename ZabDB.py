@@ -63,6 +63,8 @@ class ZabDB(Database):
             # This field is so dirty
             host['ip'] = self.getIpFromDirtyString(record.host)
             host['fsid'] = self.getFSIdFromDirtyString(record.host)
+            if host['fsid'] == 130:
+                print(record)
             host['pkgnum'] = self.getPkgnumFromDirtyString(record.host)
             hosts.append(host)
         return hosts

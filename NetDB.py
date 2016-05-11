@@ -45,7 +45,7 @@ class NetDB(Database):
         radData = raddb.fetchRadData()
         table = self.tables['radius']
         histTable = self.tables['historicradius']
-        self.updateLiveAndHist(table, histTable, radData)
+        self.updateLiveAndHist(table, histTable, radData, pkey='mac')
         return True
 
     def updateCustomers(self, fsdb):
@@ -210,19 +210,40 @@ class NetDB(Database):
     def updateBadUsernames(self):
         # Checks to see what hosts don't contain their radius username in their
         # hostname. 
+        def baduser(host):
+            bad_usernames.append({'hostname':host.hostname,
+                'username':host.username,'ip':host.ip})
         table = self.tables['hosts']
         hosts = self.execute(table.select())
         bad_usernames = []
+        nocustinhostname = 0
+        withc = 0
+        withoutc = 0
+        nondigit = 0
+        mismatch = 0
+        decimalre = re.compile(r'[^d]+')
         for host in hosts:
-            # Extraneous text won't show up in the username.
-            #custnum = ''.join(c for c in host.username if c.isdigit())
-            custnum = re.match(r'^[0-9]*', host.username).group()
-            # Test if it's missing the username, or username lacks numbers.
-            if len(custnum) == 0 or not custnum in host.hostname:
-                bad_username = {'hostname':host.hostname,
-                    'username':host.username,
-                    'ip':host.ip}
-                bad_usernames.append(bad_username)
+            # The hostname is positional, and may or may not have a leading 'C'
+            try:
+                custnum = host.hostname.split()[1]
+                # Purge leading 'C's
+                if custnum[0] == 'C' or custnum[0].isdigit():
+                    # Scrub non-digits
+                    custnum = decimalre.sub('', custnum)
+                    if custnum not in host.username:
+                        mismatch += 1
+                        print(custnum, host.hostname)
+                        # The username actually doesn't match.
+                        baduser(host)
+                else:
+                    print('non-C-or-digit hostname:', host.hostname)
+                    baduser(host)
+            except IndexError:
+                # Means that there wasn't any useful data in the username
+                baduser(host)
+                nocustinhostname += 1
+        print(bad_usernames)
+        #print(nocustinhostname, withc, withoutc, nondigit, mismatch)
         self.updateTable(self.tables['bad_usernames'], bad_usernames)
 
     def hostLookup(self, query):

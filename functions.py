@@ -15,7 +15,8 @@ def initHost(ip):
 
 def sanitizeString(dirty):
     try:
-        clean = unicodedata.normalize('NFKD', dirty).encode('ascii', 'ignore')
+        clean = unicodedata.normalize('NFKD', dirty).encode('ascii', 'ignore')\
+            .decode('ascii')
     except TypeError:
         if dirty == None:
             return dirty
