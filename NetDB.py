@@ -133,6 +133,7 @@ class NetDB(Database):
         print('There are', len(differentLink), 'hosts that were simply',
             'detected on a different link.')
         print('There are', len(unknown), 'undiagnosed hosts.')
+        print('Undiagnosed hosts: %s' % unknown)
 
     def getNetworkHosts(self):
         # Checks Zabbix for registered IP addresses, and returns a list of host
@@ -221,18 +222,18 @@ class NetDB(Database):
         withoutc = 0
         nondigit = 0
         mismatch = 0
-        decimalre = re.compile(r'[^d]+')
+        decimalre = re.compile(r'[^\d]+')
         for host in hosts:
             # The hostname is positional, and may or may not have a leading 'C'
             try:
                 custnum = host.hostname.split()[1]
                 # Purge leading 'C's
                 if custnum[0] == 'C' or custnum[0].isdigit():
-                    # Scrub non-digits
+                    # Scrub trailing non-digits
                     custnum = decimalre.sub('', custnum)
                     if custnum not in host.username:
                         mismatch += 1
-                        print(custnum, host.hostname)
+                        print('Custnum/radius username mismatch: ', custnum, host.hostname)
                         # The username actually doesn't match.
                         baduser(host)
                 else:
@@ -240,6 +241,7 @@ class NetDB(Database):
                     baduser(host)
             except IndexError:
                 # Means that there wasn't any useful data in the username
+                print('Non-useful hostname: %s' % host.hostname)
                 baduser(host)
                 nocustinhostname += 1
         print(bad_usernames)
