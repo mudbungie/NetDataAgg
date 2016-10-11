@@ -10,6 +10,7 @@ from Database import Database
 from Router import Router
 from NetworkPrimitives import Mac, Ip
 from Host import Host
+from DHCP import getLeases
 
 class NetDB(Database):
     # This is for the database of network data aggregation.
@@ -31,6 +32,7 @@ class NetDB(Database):
                     'bad_usernames',
                     'routes',
                     'historicroutes',
+                    'dhcphosts',
                     ]
 
     def updateArp(self, arps):
@@ -370,3 +372,10 @@ class NetDB(Database):
                 print(route)
                 pass
         return validRoutes
+
+    def updateDHCP(self):
+        leases = getLeases()
+        # Convert the leases into a dictionary, because of database logic.
+        leases = [{'ip':lease} for lease in leases]
+        t = self.tables['dhcphosts']
+        self.updateTable(t, leases)

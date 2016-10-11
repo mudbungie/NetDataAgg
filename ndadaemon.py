@@ -22,6 +22,7 @@ scanroutes = True
 pullforeigndbs = True
 verifyarp = True
 verifyusernames = True
+updatedhcp = True
 scannetwork = False
 
 if __name__ == '__main__':
@@ -69,6 +70,10 @@ if __name__ == '__main__':
         # This will just core dump... haven't solved multithreading.
         network.getHosts()
         #netdb.checkForBridgedHosts()
+    
+    if updatedhcp:
+        print('Updating DHCP leases...')
+        netdb.updateDHCP()
 
     #for host in network.hosts:
     #    print(host)
