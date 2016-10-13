@@ -54,5 +54,9 @@ def routelookup():
     print('Attempted route lookup for:', query)
     return WebInterface.routeLookup(query, netdb)
 
+@ndabottle.get('/dhcp')
+def getDHCPHosts():
+    return WebInterface.listToTable()
+
 ndabottle.run(host='127.0.0.1', port=config['webinterface']['port'])
 
