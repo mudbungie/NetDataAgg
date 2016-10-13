@@ -197,5 +197,5 @@ class Host:
 # testing
 if __name__ == '__main__':
     a = Host('172.24.5.26')
-    a.snmpInit('godaddy')
+    a.snmpInit(config['snmp']['radiocommunity'])
     a.getInterfaces()

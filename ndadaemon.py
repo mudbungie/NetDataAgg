@@ -73,7 +73,7 @@ if __name__ == '__main__':
     
     if updatedhcp:
         print('Updating DHCP leases...')
-        netdb.updateDHCP()
+        netdb.updateDHCP(config['dhcp']['remote_string'])
 
     #for host in network.hosts:
     #    print(host)

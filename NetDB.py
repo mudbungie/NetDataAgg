@@ -373,9 +373,7 @@ class NetDB(Database):
                 pass
         return validRoutes
 
-    def updateDHCP(self):
-        leases = getLeases()
-        # Convert the leases into a dictionary, because of database logic.
-        leases = [{'ip':lease} for lease in leases]
+    def updateDHCP(self, remote_string):
+        leases = getLeases(remote_string)
         t = self.tables['dhcphosts']
         self.updateTable(t, leases)
