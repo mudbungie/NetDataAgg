@@ -5,6 +5,7 @@ from Interface import Interface
 from Config import config
 import easysnmp
 import requests
+from requests.exceptions import *
 import json
 
 # Disable security warnings.
@@ -105,14 +106,59 @@ class Host:
             self.online = False
             #print('OFF:', self.ip)
             return None
+
+    # Attempts HTTP authentication, using all known credentials.
+    def getAuthenticatedSession(self):
+        print('Authenticating with', self.ip, end='')
+        session = requests.Session()
+        url = 'https://' + self.ip + '/login.cgi'
+        statusurl = 'https://' + self.ip + '/status.cgi'
+        creds = []
+        # If this host already has known credentials, use them.
+        try:
+            creds.append({'uname':self.username,'pword':self.password})
+        except AttributeError:
+            pass
+        creds += config['radios'].values()
+
+        for cred in creds:
+            print('.', end='')
+            payload = {'username':cred['uname'], 'password':cred['pword']}
+            try:
+                session.get(url, verify=False, timeout=1)
+                session.post(url, data=payload, verify=False, timeout=1)
+                p = session.get(statusurl, verify=False, timeout=1)
+                # Attempt to JSON-decode the result.
+                try:
+                    p.json()
+                    # If that succeeded, then we've logged in.
+                    self.username = payload['username']
+                    self.password = payload['password']
+                    print()
+                    return session
+                except ValueError:
+                    # Content didn't come back as a JSON. Login failed.
+                    try:
+                        # Purge any saved credentials.
+                        del self.username, self.password
+                    except AttributeError:
+                        pass
+            except (ConnectTimeout, ConnectionError, ReadTimeout):
+                print('\nConnection timed out with', self.ip)
+                return False
+        print('\nLogin failed with responsive host at', self.ip)
+        return False
     
-    def getStatusPage(self):
+    def getStatusPage(self, page=None):
         # Take the 
         with requests.Session() as websess:
             payload = { 'username':config['radios']['unames'],
                         'password':config['radios']['pwords']}
             loginurl = 'https://' + self.ip + '/login.cgi?url=/status.cgi'
-            statusurl = 'https://' + self.ip + '/status.cgi'
+            try:
+                statusurl = 'https://' + self.ip + page
+            except TypeError:
+                statusurl = 'https://' + self.ip + '/status.cgi'
             # Open the session, to get a session cookie
             websess.get(loginurl, verify=False, timeout=2)
             # Authenticate, which makes that cookie valid
@@ -124,7 +170,8 @@ class Host:
                 self.status = json.loads(g.text)
             except ValueError:
                 # When the json comes back blank
-                print(self.ip)
+                print('Failed to connect with:', self.ip)
+                return None
         return self.status
 
     def profile(self):
@@ -146,7 +193,7 @@ class Host:
                 interface.label = entry['ifname']
                 interface.speed = entry['status']['speed']
 
-        except requests.exceptions.ConnectionError:
+        except ConnectionError:
             self.online = False
 
     def hasMac(self, mac):
@@ -161,41 +208,46 @@ class Host:
         #print('No match')
         return False
 
-    def hasBridge(self):
-        # Pull the interface list if it's not already done.
-        if len(self.interfaces) == 0:
-            #print(self.ip)
-            self.getInterfaces()
-            #print('finished scan')
-        # We'll be comparing different classes of interfaces.
-        ath = []
-        eth = []
-        br = []
-        for interface in self.interfaces:
-            # Split out the aths and eths.
-            if interface.label[0:3] == 'ath':
-                ath.append(interface.mac)
-            elif interface.label[0:3] == 'eth':
-                eth.append(interface.mac)
-            elif interface.label[0:2] == 'br':
-                br.append(interface.mac)
-        # Oddness for efficiency.
-        #print('ath',ath)
-        #print('eth',eth)
-        #print('br',br)
-        intersection = [mac for mac in ath if mac in set(eth + br)]
-        if len(intersection) > 0:
-            # If there are any matches, send the bridged MAC address.
-            #print('dupes')
-            self.bridge = intersection
-            return intersection[0]
-        else:
-            #print('nodupes')
-            self.isBridged = False
+    def getInfoJson(self, urn):
+        session = self.getAuthenticatedSession()
+        if not session:
+            return False
+        try:
+            p = session.get('https://' + self.ip + urn)
+        except (ConnectionError, ReadTimeout):
+            print('Connection failed with previously responsive host', self.ip)
+        try:
+            return p.json()
+        except ValueError:
+            # It's not JSON
+            print('Non-JSON return in informational page.')
+            return False
+
+    # Pull the bridge table, return None or mac address of eth0.
+    def hasBridge(self, check=False):
+        # Try the cache.
+        if not check:
+            try:
+                return self.bridge
+            except AttributeError:
+                pass
+        # If there is no cache, or if the check is off, query actual radio.
+        bridgeTable = self.getInfoJson('/brmacs.cgi?brmacs=y')
+        try:
+            bridgeTable = bridgeTable['brmacs']
+            for interface in bridgeTable:
+                if interface['port'] == 'eth0':
+                    mac = Mac(interface['hwaddr'])
+                    print(self.ip, 'has bridged interface ', mac)
+                    return mac
+            print('Host has non-eth0 bridges:', bridgeTable)
+        except TypeError:
+            # Means that the host is not bridged.
             return False
 
 # testing
 if __name__ == '__main__':
-    a = Host('172.24.5.26')
-    a.snmpInit(config['snmp']['radiocommunity'])
-    a.getInterfaces()
+    a = Host('172.20.36.11') # Host with a bridged radio.
+    #a.snmpInit(config['snmp']['radiocommunity'])
+    #a.getInterfaces()
+    a.hasBridge()

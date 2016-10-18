@@ -1,4 +1,4 @@
-#!/usr/local/bin/python3
+#!/usr/bin/env python3
 
 # This is the daemon that runs checks and updates data. 
 # It forks operations on a timer.
@@ -23,7 +23,8 @@ pullforeigndbs = True
 verifyarp = True
 verifyusernames = True
 updatedhcp = True
-scannetwork = False
+scannetwork = True
+scanhostbridges = False # Currently doesn't even write to a database...
 
 if __name__ == '__main__':
     if initdbs:
@@ -31,7 +32,6 @@ if __name__ == '__main__':
         raddb = RadDB(config['databases']['radius'])
         zabdb = ZabDB(config['databases']['zabbix'])
         fsdb  = FreesideDB(config['databases']['freeside'])
-
 
     if initnet:
         yknet = Network()
@@ -66,10 +66,13 @@ if __name__ == '__main__':
         netdb.updateBadUsernames()
     
     if scannetwork:
-        network = Network(netdb)
+        print('Scanning all known hosts...')
         # This will just core dump... haven't solved multithreading.
-        network.getHosts()
-        #netdb.checkForBridgedHosts()
+        yknet.getHosts()
+
+    if scanhostbridges:
+        print('Scanning hosts for bridged interfaces...')
+        yknet.getBridgedHosts()
     
     if updatedhcp:
         print('Updating DHCP leases...')

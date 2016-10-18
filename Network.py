@@ -1,5 +1,6 @@
 # This is the class for operating the network as a whole. It is not strictly
-# subservient to the databases, but manages the network automation as a whole.
+# subservient to the databases, but manages the network automation. It's 
+# comparatively naive.
 
 from Host import Host
 from Router import Router
@@ -21,6 +22,16 @@ class Network:
     @hosts.setter
     def hosts(self, hosts):
         self.__hosts = hosts
+
+    # A smaller dict by IP
+    @property
+    def bridgedhosts(self):
+        try:
+            return self.__bridgedhosts
+        except AttributeError:
+            self.__bridgedhosts = {}
+            return self.__bridgedhosts
+
     @property
     def routerCommunity(self):
         return self.__routerCommunity
@@ -77,6 +88,16 @@ class Network:
             host.arpNeighbors[ip] = source
         return self.hosts
 
+    def getBridgedHosts(self):
+        for host in self.hosts.values():
+            bridge = host.hasBridge()
+            if bridge:
+                print('Bridge found on:', host.ip)
+                self.bridgedhosts[host.ip] = host
+        return self.bridgedhosts
+                
+                
+
     def correlateZabInfo(self, zabdb):
         #FIXME UNFINISHED
         #FIXME USE ZABBIX INTERFACE TABLE
@@ -89,12 +110,6 @@ class Network:
         # only way to search it.
         for host in self.hosts:
             pass
-            
-
-    def commitHosts(self, netdb):
-        # Log the self.hosts object to the database.
-        pass
-
 
     def initHost(ip):
         host = Host(ip)
