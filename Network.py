@@ -2,6 +2,8 @@
 # subservient to the databases, but manages the network automation. It's 
 # comparatively naive.
 
+from multiprocessing import Pool
+
 from Host import Host
 from Router import Router
 from Interface import Interface
@@ -88,15 +90,23 @@ class Network:
             host.arpNeighbors[ip] = source
         return self.hosts
 
+    def getHostBridge(self, host, verbose=True):
+        if verbose:
+            print('.', end='')
+        bridge = host.hasBridge()
+        if bridge:
+            if verbose:
+                print('!', end='')
+            return host
+
     def getBridgedHosts(self):
-        for host in self.hosts.values():
-            bridge = host.hasBridge()
-            if bridge:
-                print('Bridge found on:', host.ip)
-                self.bridgedhosts[host.ip] = host
-        return self.bridgedhosts
-                
-                
+        # Define function for parallelization.
+        hosts = self.hosts.values()
+        print(type(hosts))
+        with Pool(20) as p:
+            bridgedHosts = p.map(self.getHostBridge, hosts)
+        # Get rid of nulls, make dictionary by IP.
+        return {host.ip:host for host in bridgedHosts if host}
 
     def correlateZabInfo(self, zabdb):
         #FIXME UNFINISHED

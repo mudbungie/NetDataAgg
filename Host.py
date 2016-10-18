@@ -225,13 +225,15 @@ class Host:
 
     # Pull the bridge table, return None or mac address of eth0.
     def hasBridge(self, check=False):
-        # Try the cache.
+        # Unless told otherwise...
         if not check:
+            # Try the cache.
             try:
                 return self.bridge
             except AttributeError:
                 pass
         # If there is no cache, or if the check is off, query actual radio.
+        print('.', end='') # Just to let console-viewers know.
         bridgeTable = self.getInfoJson('/brmacs.cgi?brmacs=y')
         try:
             bridgeTable = bridgeTable['brmacs']

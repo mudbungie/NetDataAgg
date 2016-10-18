@@ -10,8 +10,6 @@ import os
 # Pulls and scans a dhcpd.leases file, returns a dictionary indexed by IP,
 # with each element being a list in the format of [mac, starts, ends]
 def getLeases(remote_string):
-    import time
-    print(time)
     now = time.time()
     # Pull the remote file. Function returns the destination path.
     leasePath = getRemoteFile(remote_string)
@@ -32,7 +30,7 @@ def getLeases(remote_string):
                 starts = TimeStamps.strToInt(line)
             elif line.startswith('ends '):
                 ends = TimeStamps.strToInt(line)
-            if line.startswith('abandoned;'):
+            if line.startswith('abandoned'):
                 pass # Let it loop again. This can be ignored.
             elif '}' in line:
                 if ip and mac and ends:

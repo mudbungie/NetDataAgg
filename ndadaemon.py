@@ -23,8 +23,8 @@ pullforeigndbs = True
 verifyarp = True
 verifyusernames = True
 updatedhcp = True
-scannetwork = True
-scanhostbridges = False # Currently doesn't even write to a database...
+scannetwork = False
+scanhostbridges = True # Currently doesn't even write to a database...
 
 if __name__ == '__main__':
     if initdbs:
