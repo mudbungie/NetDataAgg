@@ -19,6 +19,13 @@ class Router(Host):
         self.session = Session(hostname=str(self.ip), community=community,
             version=1)
 
+    @property
+    def routes(self):
+        return self.__routes
+    @routes.setter
+    def routes(self, data):
+        print('route set on', self.ip)
+        self.__routes = data
 
     def walk(self, mib):
         # Walks the specified mib
@@ -83,7 +90,7 @@ class Router(Host):
         mib = 'ipCidrRouteTable'
         responses = self.walk(mib)
         errors = 0
-        routes = {} # Internally, we'll want to do lookups.
+        routes = {} # Internally, we'll want to do lookups, so dict.
         print('Recieved', len(responses), 'SNMP responses from', self.ip)
         for r in responses:
             try:

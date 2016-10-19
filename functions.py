@@ -4,6 +4,8 @@ from Host import Host
 import unicodedata
 import subprocess
 import os
+import threading
+from queue import Queue
 
 def initHost(ip):
     #print('Scanning', ip)
@@ -43,3 +45,21 @@ def getRemoteFile(remote_string):
     # I figure the most useful thing from this function is the path to the file.
     return destination + filename
 
+# I don't know why this isn't how the standard libraries are written anyhow.
+# Arguments must be a list of tuples. Returns a list of returned values.
+def parallelize(function, arguments, limit=0):
+	# Only belongs in this namespace.
+	def task_wrapper(q, results, function, arg):
+		results.append(function(*arg))
+		q.task_done()
+
+	q = Queue()
+	results = []
+	for arg in arguments:
+		t = threading.Thread(target=task_wrapper, args=(q, results, function, arg))
+		t.daemon = True
+		t.start()
+		q.put(t)
+	q.join()
+
+	return results

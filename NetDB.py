@@ -279,6 +279,7 @@ class NetDB(Database):
         ht = self.tables['historicroutes']
         now = datetime.now()
         routeraddr = router.ip
+        print(routeraddr)
         newRoutes = router.routes
         q = t.select().where(t.c.router == routeraddr)
         oldRouteList = self.recordsToListOfDicts(self.execute(q))

@@ -109,7 +109,7 @@ class Host:
 
     # Attempts HTTP authentication, using all known credentials.
     def getAuthenticatedSession(self):
-        print('Authenticating with', self.ip, end='')
+        #print('Authenticating with', self.ip, end='')
         session = requests.Session()
         url = 'https://' + self.ip + '/login.cgi'
         statusurl = 'https://' + self.ip + '/status.cgi'
@@ -144,7 +144,8 @@ class Host:
                     except AttributeError:
                         pass
             except (ConnectTimeout, ConnectionError, ReadTimeout):
-                print('\nConnection timed out with', self.ip)
+                #print('\nConnection timed out with', self.ip)
+                print('#', end='')
                 return False
         print('\nLogin failed with responsive host at', self.ip)
         return False
