@@ -5,6 +5,7 @@ import unicodedata
 import subprocess
 import os
 import threading
+import time
 from queue import Queue
 
 def initHost(ip):
@@ -49,17 +50,19 @@ def getRemoteFile(remote_string):
 # Arguments must be a list of tuples. Returns a list of returned values.
 def parallelize(function, arguments, limit=0):
 	# Only belongs in this namespace.
-	def task_wrapper(q, results, function, arg):
-		results.append(function(*arg))
-		q.task_done()
+	def task_wrapper(q, function, arg):
+		#print('task started')
+		q.put(function(*arg))
+		#print('task completed')
 
 	q = Queue()
-	results = []
+	threads = []
 	for arg in arguments:
-		t = threading.Thread(target=task_wrapper, args=(q, results, function, arg))
-		t.daemon = True
+		time.sleep(0.1) # Prevent thrashing.
+		t = threading.Thread(target=task_wrapper, args=(q, function, arg))
 		t.start()
-		q.put(t)
-	q.join()
+		threads.append(t)
+	for thread in threads:
+		thread.join() # Prevents the execution from advancing until they are all done. 
 
-	return results
+	return [q.get() for _ in range(len(arguments))]

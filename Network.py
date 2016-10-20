@@ -93,6 +93,7 @@ class Network:
 
 	def getHosts(self):
 		# We're going to iterate over all the arps, and turn them into hosts.
+		print('Populating hosts from list of', len(self.globalArpTable), 'ARP resolutions.')
 		for arp in self.globalArpTable:
 			ip = arp['ip']
 			mac = arp['mac']
@@ -109,6 +110,7 @@ class Network:
 			# Then, new or not, add the interface information.
 			host.interfaces[mac] = interface
 			host.arpNeighbors[ip] = source
+		print('Showing', len(self.hosts), 'hosts!')
 		return self.hosts
 
 	def getHostBridge(self, host, verbose=True):
@@ -123,11 +125,13 @@ class Network:
 	def getBridgedHosts(self):
 		# Define function for parallelization.
 		hosts = [(host,) for host in self.hosts.values()]
+		print(len(hosts))
 		bridgedHosts = parallelize(self.getHostBridge, hosts)
-		#with Pool(5) as p:
-		#		bridgedHosts = p.map(self.getHostBridge, hosts)
+		print(bridgedHosts)
 		# Get rid of nulls, make dictionary by IP.
-		return {host.ip:host for host in bridgedHosts if host}
+		bridgedHosts = {host.ip:host for host in bridgedHosts if host}
+		print('Found', len(bridgedHosts), 'bridged hosts.')
+		return bridgedHosts
 
 	def correlateZabInfo(self, zabdb):
 		#FIXME UNFINISHED
