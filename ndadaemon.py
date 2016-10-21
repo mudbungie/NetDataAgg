@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#/usr/bin/env python3
 
 # This is the daemon that runs checks and updates data. 
 # It forks operations on a timer.

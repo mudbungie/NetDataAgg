@@ -130,7 +130,7 @@ class Network:
 		#print(bridgedHosts)
 		# Get rid of nulls, make dictionary by IP.
 		bridgedHosts = {host.ip:host for host in bridgedHosts if host}
-		print('Found', len(bridgedHosts), 'bridged hosts.')
+		print('\nFound', len(bridgedHosts), 'bridged hosts.')
 		return bridgedHosts
 
 	def correlateZabInfo(self, zabdb):

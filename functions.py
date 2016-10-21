@@ -58,9 +58,10 @@ def parallelize(function, arguments, limit=0):
 	for arg in arguments:
 		time.sleep(0.1) # Prevent thrashing.
 		t = threading.Thread(target=task_wrapper, args=(q, function, arg))
+		t.daemon = True
 		t.start()
 		threads.append(t)
 	for thread in threads:
 		thread.join() # Prevents the execution from advancing until they are all done. 
 
-	return [q.get() for _ in range(len(arguments))]
+	return [q.get() for i in range(len(arguments))]
