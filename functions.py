@@ -51,9 +51,7 @@ def getRemoteFile(remote_string):
 def parallelize(function, arguments, limit=0):
 	# Only belongs in this namespace.
 	def task_wrapper(q, function, arg):
-		#print('task started')
 		q.put(function(*arg))
-		#print('task completed')
 
 	q = Queue()
 	threads = []

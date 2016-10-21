@@ -1,7 +1,6 @@
 # Subscripting a string for validation, because (jingle) always validate...
 # your input!
 
-from Exceptions import InputError
 import re
 from binascii import hexlify
 
@@ -18,14 +17,14 @@ class Mac(str):
                 s[26:28]]).lower()
             #print(macstr)
         else:
-            # Should never happen, means that an unsopported encoding was
+            # Should never happen, means that an unsupported encoding was
             # specified.
             raise Exception('Unsopported encoding ' + encoding)
 
         # Validate!
         macre = re.compile(r'([a-f0-9]{2}[:]?){6}')
         if not macre.match(macstr):
-            raise InputError('Not a MAC address:', macstr)
+            raise ValueError('Not a MAC address:', macstr)
 
         return super(Mac, cls).__new__(cls, macstr)
 
@@ -56,9 +55,9 @@ class Ip(str):
             ipStr = '.'.join([str(b) for b in ipBytes])
             # Make sure that it has four octets, and that we haven't lost anything.
             if len(ipBytes) != 4 or ipStr != address:
-                raise InputError('Improper string submitted for IP address')
+                raise ValueError('Improper string submitted for IP address')
         except ValueError:
-            raise InputError('Not an IP address:' + str(address))
+            raise ValueError('Not an IP address:' + str(address))
         # Sound like everything's fine!
         return octets
 

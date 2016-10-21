@@ -125,9 +125,9 @@ class Network:
 	def getBridgedHosts(self):
 		# Define function for parallelization.
 		hosts = [(host,) for host in self.hosts.values()]
-		print(len(hosts))
+		print('Checking for bridged interfaces on {} hosts.'.format(len(hosts)))
 		bridgedHosts = parallelize(self.getHostBridge, hosts)
-		print(bridgedHosts)
+		#print(bridgedHosts)
 		# Get rid of nulls, make dictionary by IP.
 		bridgedHosts = {host.ip:host for host in bridgedHosts if host}
 		print('Found', len(bridgedHosts), 'bridged hosts.')

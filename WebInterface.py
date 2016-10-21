@@ -1,7 +1,6 @@
 # Data formatting functions to give nice strings back to the webserver.
 
 from NetworkPrimitives import Ip, Mac
-import Exceptions
 
 def pageWrap(content):
     # Gives back an HTML body with standard head data.
@@ -23,11 +22,11 @@ def hostLookup(query, netdb):
     try:
         # If it's a Mac...
         query = Mac(query)
-    except Exceptions.InputError:
+    except ValueError:
         try:
             # Or an Ip...
             query = Ip(query)
-        except Exceptions.InputError:
+        except ValueError:
             # Otherwise, assume customer name.
             pass 
     hosts = netdb.hostLookup(query)
@@ -41,11 +40,11 @@ def arpLookup(query, netdb):
     try:
         # If it's a Mac...
         query = Mac(query)
-    except Exceptions.InputError:
+    except ValueError:
         try:
             # Or an Ip...
             query = Ip(query)
-        except Exceptions.InputError:
+        except ValueError:
             # Otherwise, assume customer name.
             return 'Please enter an IP or MAC address.'
     hosts = netdb.arpLookup(query)
@@ -58,7 +57,7 @@ def routeLookup(query, netdb):
     try:
         # Validate...
         query = Ip(query)
-    except Exceptions.InputError:
+    except ValueError:
         return 'IP addresses only.'
     routes = netdb.findValidRoutes(query)
     return pageWrap(listToTable(['destination', 'netmask', 'nexthop', 
